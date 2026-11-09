@@ -1,0 +1,6 @@
+# Line endings are LF in the index and on checkout, on every platform. Without this, the
+# global core.autocrlf=true rewrites the working tree to CRLF on the first checkout and every
+# file looks modified.
+* text=auto eol=lf
+
+*.png binary
