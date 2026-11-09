@@ -1,0 +1,12 @@
+# Internal mood reference only. Never committed, bundled, published, or traced.
+/reference/
+
+# Build output and dependencies
+/node_modules/
+/dist/
+
+# Local tooling and OS junk
+.qoder/
+.DS_Store
+Thumbs.db
+desktop.ini

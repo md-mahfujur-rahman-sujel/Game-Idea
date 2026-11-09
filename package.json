@@ -1,0 +1,21 @@
+{
+  "name": "little-batch-works",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Little Batch Works — a cozy 3D voxel conveyor-routing tycoon (web build).",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview --host",
+    "test": "node --test \"tests/*.test.mjs\"",
+    "check:levels": "node scripts/check-levels.mjs",
+    "check": "npm test && npm run check:levels && npm run build"
+  },
+  "dependencies": {
+    "three": "^0.187.0"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}

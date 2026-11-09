@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#FBF3E4" />
+<title>Little Batch Works — rotate / resize prompt</title>
+<style>
+  :root{
+    --cream:#FBF3E4;
+    --cream-2:#F4E6D0;
+    --cream-3:#FFFDF6;
+    --terracotta:#B85C38;
+    --terracotta-dk:#8C3F26;
+    --brass:#C99A4B;
+    --brass-dk:#9A7233;
+    --ink:#463527;
+    --ink-soft:#7A6450;
+    --mint:#A8D5C6;
+    --mint-dk:#5E9E8B;
+    --ground:#E7D3B4;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{overflow:hidden}
+  body{
+    font-family:"Segoe UI","Trebuchet MS",system-ui,sans-serif;
+    color:var(--ink);background:var(--cream);
+    -webkit-font-smoothing:antialiased;
+    display:none;
+  }
+  body[data-mode="rotate"]{width:360px;height:640px;display:block}
+  body[data-mode="resize"]{width:900px;height:560px;display:block}
+
+  .screen{
+    position:relative;width:100%;height:100%;display:none;flex-direction:column;
+    overflow:hidden;
+    background:
+      radial-gradient(120% 70% at 50% 18%, #FFFCF3 0%, rgba(255,252,243,0) 62%),
+      linear-gradient(180deg, #FDF6E9 0%, var(--cream) 44%, var(--cream-2) 100%);
+  }
+  body[data-mode="rotate"] .screen.rotate{display:flex}
+  body[data-mode="resize"] .screen.resize{display:flex}
+
+  /* inner craft frame, matches the HUD cards */
+  .grid{
+    position:absolute;inset:0;pointer-events:none;z-index:0;
+    background-image:
+      repeating-linear-gradient(60deg, rgba(154,114,51,.085) 0 1px, transparent 1px 32px),
+      repeating-linear-gradient(-60deg, rgba(154,114,51,.085) 0 1px, transparent 1px 32px);
+    -webkit-mask-image:linear-gradient(180deg, rgba(0,0,0,.9) 0%, rgba(0,0,0,0) 66%);
+    mask-image:linear-gradient(180deg, rgba(0,0,0,.9) 0%, rgba(0,0,0,0) 66%);
+  }
+  .screen > *{position:relative;z-index:1}
+  .screen > .grid{position:absolute;z-index:0}
+
+  .screen::before{
+    content:"";position:absolute;inset:10px;border:1px solid rgba(201,154,75,.42);
+    border-radius:18px;pointer-events:none;z-index:2;
+  }
+  .screen::after{
+    content:"";position:absolute;left:0;right:0;top:0;height:5px;
+    background:linear-gradient(90deg, var(--terracotta) 0%, var(--brass) 52%, var(--mint-dk) 100%);
+    opacity:.85;z-index:3;
+  }
+
+  .brand{display:flex;align-items:center;gap:9px}
+  .mark{
+    width:36px;height:36px;border-radius:11px;flex:none;display:grid;place-items:center;
+    background:radial-gradient(circle at 34% 30%, #F0A66B, var(--terracotta) 62%, var(--terracotta-dk));
+    box-shadow:inset 0 -2px 0 rgba(0,0,0,.16), 0 4px 10px rgba(140,63,38,.24);
+  }
+  .mark svg{width:20px;height:20px}
+  .wordmark{font-size:13px;font-weight:800;letter-spacing:.005em;line-height:1.15}
+  .wordmark span{display:block;font-size:8px;letter-spacing:.17em;text-transform:uppercase;color:var(--brass-dk);font-weight:800;margin-top:2px}
+
+  .eyebrow{
+    display:inline-flex;align-items:center;gap:6px;align-self:center;
+    font-size:8.5px;font-weight:800;letter-spacing:.19em;text-transform:uppercase;color:var(--terracotta-dk);
+  }
+  .eyebrow i{width:5px;height:5px;border-radius:50%;background:var(--terracotta);display:block}
+
+  h1{
+    font-size:26px;line-height:1.14;font-weight:800;letter-spacing:-.01em;text-align:center;
+  }
+  .body{
+    font-size:12.5px;line-height:1.6;font-weight:600;color:var(--ink-soft);text-align:center;
+  }
+
+  .foot{
+    display:flex;align-items:center;gap:7px;justify-content:center;
+    font-size:8.5px;font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--brass-dk);
+  }
+  .foot em{
+    font-style:normal;color:var(--ink-soft);letter-spacing:.12em;
+  }
+  .foot .dot{width:3px;height:3px;border-radius:50%;background:rgba(154,114,51,.6);display:block}
+
+  /* ---------- rotate (360 × 640) ---------- */
+  .rotate{padding:30px 26px 26px;align-items:center}
+  .rotate .brand{align-self:center}
+  .rotate .art{margin-top:58px;width:100%;display:flex;justify-content:center}
+  .rotate .art svg{width:302px;height:171px}
+  .rotate .eyebrow{margin-top:54px}
+  .rotate h1{margin-top:12px}
+  .rotate .body{margin-top:12px;max-width:286px;font-size:13px}
+  .rotate .foot{
+    margin-top:auto;padding-top:15px;width:100%;
+    border-top:1px solid rgba(201,154,75,.38);justify-content:center;
+  }
+
+  /* ---------- resize (900 × 560) ---------- */
+  .resize{padding:46px 56px 44px}
+  .resize .brand{position:absolute;left:56px;top:44px}
+  .resize .cols{
+    flex:1;display:flex;align-items:center;gap:52px;
+    padding-top:34px;
+  }
+  .resize .art{flex:1.05;display:flex;justify-content:center}
+  .resize .art svg{width:100%;max-width:420px;height:auto}
+  .resize .copy{flex:1;display:flex;flex-direction:column;align-items:flex-start;padding-bottom:6px}
+  .resize .eyebrow{align-self:flex-start}
+  .resize h1{text-align:left;font-size:30px;margin-top:12px;max-width:330px}
+  .resize .body{text-align:left;max-width:336px;margin-top:12px;font-size:13.5px}
+  .resize .rule{
+    width:46px;height:3px;border-radius:2px;background:var(--terracotta);margin-top:20px;opacity:.8;
+  }
+  .resize .foot{margin-top:auto;justify-content:flex-start;padding-top:26px}
+</style>
+</head>
+<body data-mode="rotate">
+
+  <!-- portrait rotate prompt -->
+  <main class="screen rotate">
+    <div class="grid"></div>
+    <header class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h14l-1.4 9.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8L5 9z"/><path d="M8.5 9c0-2.2 1.6-4 3.5-4s3.5 1.8 3.5 4"/><path d="M9.5 13.2h5"/></svg>
+      </div>
+      <div class="wordmark">Little Batch Works<span>Isometric workshop</span></div>
+    </header>
+
+    <div class="art">
+      <svg viewBox="0 0 302 171" fill="none">
+        <defs>
+          <linearGradient id="g-see" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#FFFCF4"/><stop offset="1" stop-color="#F7EBD6"/>
+          </linearGradient>
+          <linearGradient id="g-mint" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" stop-color="#C6E7DB"/><stop offset="1" stop-color="#8FC7B4"/>
+          </linearGradient>
+        </defs>
+
+        <!-- portrait phone -->
+        <rect x="18" y="20" width="66" height="120" rx="15" fill="url(#g-see)" stroke="#463527" stroke-width="3"/>
+        <rect x="26" y="32" width="50" height="94" rx="8" fill="#FFFDF6" stroke="rgba(201,154,75,.55)"/>
+        <!-- mini scene, portrait -->
+        <rect x="30" y="89" width="42" height="16" rx="3" fill="#E7D3B4"/>
+        <rect x="36" y="66" width="30" height="26" rx="5" fill="url(#g-mint)" stroke="#5E9E8B" stroke-width="1.6"/>
+        <rect x="36" y="66" width="30" height="9" rx="5" fill="#BFE3D6" stroke="#5E9E8B" stroke-width="1.6"/>
+        <rect x="31" y="94" width="40" height="6" rx="2" fill="#B85C38"/>
+        <circle cx="40" cy="97" r="1.6" fill="#FBF3E4"/>
+        <circle cx="49" cy="97" r="1.6" fill="#FBF3E4"/>
+        <circle cx="58" cy="97" r="1.6" fill="#FBF3E4"/>
+        <rect x="44" y="131" width="14" height="3" rx="1.5" fill="rgba(70,53,39,.32)"/>
+
+        <!-- curved arrow -->
+        <path d="M94 80c12-16 30-16 42 0" stroke="#B85C38" stroke-width="3.4" stroke-linecap="round"/>
+        <path d="M128 84l9-6.5-1.6 11" fill="#B85C38"/>
+
+        <!-- landscape phone -->
+        <rect x="150" y="44" width="132" height="76" rx="15" fill="url(#g-see)" stroke="#463527" stroke-width="3"/>
+        <rect x="160" y="52" width="112" height="60" rx="8" fill="#FFFDF6" stroke="rgba(201,154,75,.55)"/>
+        <!-- mini scene, landscape -->
+        <rect x="166" y="92" width="100" height="14" rx="3" fill="#E7D3B4"/>
+        <rect x="172" y="70" width="32" height="22" rx="4" fill="url(#g-mint)" stroke="#5E9E8B" stroke-width="1.6"/>
+        <rect x="172" y="70" width="32" height="8" rx="4" fill="#BFE3D6" stroke="#5E9E8B" stroke-width="1.6"/>
+        <rect x="206" y="87" width="52" height="6" rx="2" fill="#B85C38"/>
+        <circle cx="214" cy="90" r="1.5" fill="#FBF3E4"/>
+        <circle cx="224" cy="90" r="1.5" fill="#FBF3E4"/>
+        <circle cx="234" cy="90" r="1.5" fill="#FBF3E4"/>
+        <circle cx="244" cy="90" r="1.5" fill="#FBF3E4"/>
+        <rect x="172" y="60" width="26" height="4" rx="2" fill="rgba(201,154,75,.5)"/>
+
+        <!-- ground shadow -->
+        <ellipse cx="120" cy="155" rx="86" ry="7" fill="rgba(140,63,38,.10)"/>
+      </svg>
+    </div>
+
+    <div class="eyebrow"><i></i>Landscape only</div>
+    <h1>Rotate your phone</h1>
+    <p class="body">The workshop needs a wide view. Turn your device sideways and your belts and batches are right where you left them.</p>
+
+    <div class="foot">
+      <em>Landscape</em><span class="dot"></span><span>640 × 360</span>
+    </div>
+  </main>
+
+  <!-- desktop small-window prompt -->
+  <main class="screen resize">
+    <div class="grid"></div>
+    <header class="brand">
+      <div class="mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#FFF6E7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 9h14l-1.4 9.2a2 2 0 0 1-2 1.8H8.4a2 2 0 0 1-2-1.8L5 9z"/><path d="M8.5 9c0-2.2 1.6-4 3.5-4s3.5 1.8 3.5 4"/><path d="M9.5 13.2h5"/></svg>
+      </div>
+      <div class="wordmark">Little Batch Works<span>Isometric workshop</span></div>
+    </header>
+
+    <div class="cols">
+      <div class="art">
+        <svg viewBox="0 0 392 236" fill="none">
+          <defs>
+            <linearGradient id="r-mint" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#C6E7DB"/><stop offset="1" stop-color="#8FC7B4"/>
+            </linearGradient>
+            <linearGradient id="r-see" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0" stop-color="#FFFCF4"/><stop offset="1" stop-color="#F8EEDB"/>
+            </linearGradient>
+          </defs>
+
+          <!-- before: cramped window, panels covering the workshop -->
+          <g>
+            <rect x="6" y="58" width="142" height="112" rx="12" fill="url(#r-see)" stroke="#463527" stroke-width="2.6"/>
+            <path d="M6 74h142" stroke="rgba(70,53,39,.22)" stroke-width="2"/>
+            <circle cx="18" cy="66" r="2.4" fill="#C99A4B"/>
+            <circle cx="27" cy="66" r="2.4" fill="#C99A4B" opacity=".6"/>
+            <circle cx="36" cy="66" r="2.4" fill="#C99A4B" opacity=".35"/>
+
+            <rect x="14" y="98" width="126" height="10" rx="3" fill="#E7D3B4"/>
+            <rect x="14" y="118" width="38" height="28" rx="5" fill="url(#r-mint)" stroke="#5E9E8B" stroke-width="1.6"/>
+            <rect x="14" y="118" width="38" height="10" rx="5" fill="#BFE3D6" stroke="#5E9E8B" stroke-width="1.6"/>
+            <rect x="14" y="152" width="100" height="7" rx="2" fill="#B85C38"/>
+
+            <rect x="58" y="86" width="62" height="80" rx="8" fill="#F4E6D0" fill-opacity=".9" stroke="#B85C38" stroke-width="1.7" stroke-dasharray="5 4"/>
+            <rect x="88" y="94" width="56" height="74" rx="8" fill="#F7EDDC" fill-opacity=".92" stroke="#B85C38" stroke-width="1.7" stroke-dasharray="5 4"/>
+
+            <circle cx="92" cy="130" r="11" fill="#B8502E"/>
+            <path d="M92 124v8" stroke="#FFF6E7" stroke-width="2.6" stroke-linecap="round"/>
+            <circle cx="92" cy="137" r="1.5" fill="#FFF6E7"/>
+          </g>
+
+          <!-- arrow -->
+          <path d="M156 122c14 12 26 12 38 2" stroke="#B85C38" stroke-width="3.2" stroke-linecap="round"/>
+          <path d="M186 130l9-8-1 11" fill="#B85C38"/>
+
+          <!-- after: roomy window -->
+          <g>
+            <rect x="204" y="36" width="182" height="150" rx="13" fill="url(#r-see)" stroke="#463527" stroke-width="2.8"/>
+            <path d="M204 54h182" stroke="rgba(70,53,39,.22)" stroke-width="2"/>
+            <circle cx="217" cy="45" r="2.5" fill="#C99A4B"/>
+            <circle cx="226" cy="45" r="2.5" fill="#C99A4B" opacity=".6"/>
+            <circle cx="235" cy="45" r="2.5" fill="#C99A4B" opacity=".35"/>
+
+            <rect x="214" y="96" width="118" height="11" rx="3" fill="#E7D3B4"/>
+            <rect x="214" y="70" width="40" height="26" rx="5" fill="url(#r-mint)" stroke="#5E9E8B" stroke-width="1.7"/>
+            <rect x="214" y="70" width="40" height="9" rx="5" fill="#BFE3D6" stroke="#5E9E8B" stroke-width="1.7"/>
+            <rect x="214" y="118" width="104" height="8" rx="2.5" fill="#B85C38"/>
+            <circle cx="224" cy="122" r="1.7" fill="#FBF3E4"/>
+            <circle cx="236" cy="122" r="1.7" fill="#FBF3E4"/>
+            <circle cx="248" cy="122" r="1.7" fill="#FBF3E4"/>
+            <circle cx="260" cy="122" r="1.7" fill="#FBF3E4"/>
+            <rect x="266" y="70" width="30" height="24" rx="5" fill="#E7D3B4" stroke="rgba(154,114,51,.55)"/>
+
+            <rect x="332" y="62" width="46" height="116" rx="8" fill="#F7EDDC" stroke="rgba(201,154,75,.85)"/>
+            <rect x="340" y="72" width="30" height="5" rx="2.5" fill="rgba(154,114,51,.45)"/>
+            <rect x="340" y="83" width="30" height="5" rx="2.5" fill="rgba(154,114,51,.3)"/>
+            <rect x="340" y="94" width="20" height="5" rx="2.5" fill="rgba(154,114,51,.3)"/>
+            <rect x="340" y="112" width="30" height="18" rx="4" fill="rgba(184,92,56,.3)"/>
+            <rect x="340" y="138" width="30" height="5" rx="2.5" fill="rgba(154,114,51,.3)"/>
+            <rect x="340" y="149" width="22" height="5" rx="2.5" fill="rgba(154,114,51,.3)"/>
+
+            <path d="M362 172l14 14M370 172l6 6M362 180l6 6" stroke="#9A7233" stroke-width="1.8" stroke-linecap="round"/>
+          </g>
+
+          <ellipse cx="196" cy="206" rx="176" ry="7" fill="rgba(140,63,38,.09)"/>
+        </svg>
+      </div>
+
+      <div class="copy">
+        <div class="eyebrow"><i></i>Window too small</div>
+        <h1>Give the workshop more room</h1>
+        <p class="body">At 1024 × 700 the build, order and context panels fit beside the belts. Make the window larger and the workshop comes back — nothing is lost.</p>
+        <div class="rule"></div>
+        <div class="foot">
+          <em>Minimum</em><span class="dot"></span><span>1024 × 700</span>
+        </div>
+      </div>
+    </div>
+  </main>
+
+<script>
+  function applyMode(){
+    var m = location.hash === "#resize" ? "resize" : "rotate";
+    document.body.dataset.mode = m;
+  }
+  window.addEventListener("hashchange", applyMode);
+  applyMode();
+</script>
+</body>
+</html>
