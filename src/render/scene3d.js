@@ -1634,9 +1634,8 @@ export class WorkshopScene3D {
   }
 
   rotateOrbit(yawAmount, pitchAmount = 0) {
-    // Any deliberate rotation is the signal to walk the pivot back to where the player left it,
-    // so the corner a pointer zoom slid into eases home instead of staying off-centre.
-    if (this.cameraTarget.distanceToSquared(this.pivotAnchor) > 1e-4) this.pivotHoming = true;
+    // Rotating orbits the spot you are looking at and never walks the view back to the centre,
+    // so you can slide somewhere, zoom in and look around it freely.
     const offset = this.camera.position.clone().sub(this.cameraTarget);
     const spherical = new THREE.Spherical().setFromVector3(offset);
     spherical.theta = THREE.MathUtils.euclideanModulo(spherical.theta + yawAmount + Math.PI, Math.PI * 2) - Math.PI;
@@ -1648,7 +1647,6 @@ export class WorkshopScene3D {
   }
 
   setOrbitYawDegrees(degrees) {
-    if (this.cameraTarget.distanceToSquared(this.pivotAnchor) > 1e-4) this.pivotHoming = true;
     const theta = THREE.MathUtils.euclideanModulo(degrees * Math.PI / 180 + Math.PI, Math.PI * 2) - Math.PI;
     const offset = this.camera.position.clone().sub(this.cameraTarget);
     const spherical = new THREE.Spherical().setFromVector3(offset);
@@ -1707,7 +1705,11 @@ export class WorkshopScene3D {
       const spherical = new THREE.Spherical().setFromVector3(offset);
       // Left-drag or one-finger drag orbits around the world;
       // right-drag, middle-drag or Shift-drag grabs the ground and pans it.
-      const pan = e.pointerType !== 'touch' && (e.button === 2 || e.button === 1 || e.shiftKey);
+      // Zoomed in, a plain drag slides the view across the world so you can look around close up,
+      // and the right button or Shift rotates instead. Zoomed out the roles are the other way round.
+      const closeUp = offset.length() < 45;
+      const alt = e.button === 2 || e.button === 1 || e.shiftKey;
+      const pan = e.pointerType === 'touch' ? closeUp : (alt !== closeUp);
       const rotate = !pan;
       this.drag = {
         id: e.pointerId, x: e.clientX, y: e.clientY, moved: false, pan, rotate,
@@ -1757,7 +1759,6 @@ export class WorkshopScene3D {
       if (Math.abs(dx) + Math.abs(dy) > 5) this.drag.moved = true;
       if (!this.drag.moved) return;
       if (this.drag.rotate) {
-        if (this.cameraTarget.distanceToSquared(this.pivotAnchor) > 1e-4) this.pivotHoming = true;
         const rect = canvas.getBoundingClientRect();
         // One canvas-width sweeps a full circle; one canvas-height sweeps pole to pole.
         const dTheta = -dx / Math.max(1, rect.width) * Math.PI * 2;
