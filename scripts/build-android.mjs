@@ -47,19 +47,24 @@ function run(command, args, cwd = root) {
   const result = spawnSync(command, args, {
     cwd,
     stdio: 'inherit',
-    shell: windows,
     env,
   });
   if (result.error) throw result.error;
   if (result.status !== 0) process.exit(result.status || 1);
 }
 
-run('npm', ['run', 'build']);
-run('npx', ['cap', 'sync', 'android']);
+const npmCli = env.npm_execpath || path.join(path.dirname(process.execPath), 'node_modules', 'npm', 'bin', 'npm-cli.js');
+try { await access(npmCli); }
+catch { throw new Error('Could not locate npm. Run this build with "npm run build:android".'); }
+const capacitorCli = path.join(root, 'node_modules', '@capacitor', 'cli', 'bin', 'capacitor');
+run(process.execPath, [npmCli, 'run', 'build']);
+run(process.execPath, [capacitorCli, 'sync', 'android']);
 const signingEnv = ['LBW_ANDROID_KEYSTORE', 'LBW_ANDROID_STORE_PASSWORD', 'LBW_ANDROID_KEY_ALIAS', 'LBW_ANDROID_KEY_PASSWORD'];
 const releaseSigned = signingEnv.every(key => process.env[key]);
 const variant = releaseSigned ? 'release' : 'debug';
-run(windows ? 'gradlew.bat' : './gradlew', [`assemble${variant[0].toUpperCase()}${variant.slice(1)}`], path.join(root, 'android'));
+const gradleWrapper = path.join(root, 'android', 'gradle', 'wrapper', 'gradle-wrapper.jar');
+const java = env.JAVA_HOME ? path.join(env.JAVA_HOME, 'bin', windows ? 'java.exe' : 'java') : 'java';
+run(java, ['-classpath', gradleWrapper, 'org.gradle.wrapper.GradleWrapperMain', `assemble${variant[0].toUpperCase()}${variant.slice(1)}`], path.join(root, 'android'));
 
 const output = path.join(root, 'release');
 await mkdir(output, { recursive: true });
