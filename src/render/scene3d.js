@@ -72,6 +72,7 @@ export class WorkshopScene3D {
     this.selectionMaterial = null;
     this.gridMaterial = null;
     this.workerMeshes = [];
+    this.customerMeshes = [];
     this.windGroups = [];
 
     this.world = new THREE.Scene();
@@ -1293,12 +1294,22 @@ export class WorkshopScene3D {
     } else if (role === 'freezer') {
       blob(-0.31, 0.94, 0, 0.11, 0.17, 0.12, 0xadc1be);
       blob(0.31, 0.94, 0, 0.11, 0.17, 0.12, 0xadc1be);
+    } else if (role === 'customer') {
+      const style = Math.floor(g.userData.phase * 10) % 3;
+      if (style === 0) {
+        for (const sx of [-1, 1]) blob(sx * 0.13, 1.22, 0, 0.14, 0.46, 0.12, headColor);
+      } else if (style === 1) {
+        for (const sx of [-1, 1]) blob(sx * 0.35, 0.94, 0, 0.2, 0.23, 0.16, headColor);
+      } else {
+        for (const sx of [-1, 1]) blob(sx * 0.24, 1.07, 0, 0.12, 0.3, 0.12, headColor).rotation.z = sx * -0.38;
+      }
     } else {
       for (const sx of [-1, 1]) blob(sx * 0.26, 1.06, 0, 0.18, 0.18, 0.1, headColor);
     }
     const destination = role === 'customer' ? this.customerRoot : this.workerRoot;
     destination.add(g);
-    if (role !== 'customer') this.workerMeshes.push(g);
+    if (role === 'customer') this.customerMeshes.push(g);
+    else this.workerMeshes.push(g);
     return g;
   }
 
@@ -1329,10 +1340,12 @@ export class WorkshopScene3D {
   celebrateWorkers() {
     const until = this.time + 1.1;
     for (const worker of this.workerMeshes) worker.userData.celebrateUntil = until;
+    for (const customer of this.customerMeshes) customer.userData.celebrateUntil = until;
   }
 
   rebuildCustomers() {
     this.clearGroup(this.customerRoot);
+    this.customerMeshes = [];
     if (!this.s) return;
     const counter = this.s.objects.find(o => o.type === 'counter');
     if (counter) {
@@ -1340,6 +1353,7 @@ export class WorkshopScene3D {
       customers.forEach((order, i) => {
         const customer = this.addWorker(counter.x + 0.15 + i * 0.4, counter.y + counter.h + 1.05, [0xb06a6c, 0xa18f93, 0x8a5f4c][i % 3], [0xe8c9ae, 0xc3a183, 0xe6d6c2][i % 3], 'customer');
         customer.scale.setScalar(0.82);
+        customer.userData.order = order;
       });
     }
   }
@@ -2132,9 +2146,21 @@ export class WorkshopScene3D {
       this.updateFx(delta);
       if (!this.settings.reducedMotion) {
         this.animateWorkers();
+        this.animateCustomers();
         this.workersAtRest = false;
       } else if (!this.workersAtRest) {
-        this.workerMeshes.forEach(worker => { worker.position.y = 0; worker.rotation.set(0, 0, 0); });
+        this.workerMeshes.forEach(worker => {
+          worker.position.y = 0;
+          worker.rotation.set(0, 0, 0);
+          worker.userData.hands.forEach(hand => hand.rotation.z = 0);
+          worker.userData.apron.material.color.setHex(0xfff4de);
+        });
+        this.customerMeshes.forEach(customer => {
+          customer.position.y = 0;
+          customer.rotation.set(0, 0, 0);
+          customer.userData.hands.forEach(hand => hand.rotation.z = 0);
+          customer.userData.apron.material.color.setHex(0xfff4de);
+        });
         this.workersAtRest = true;
       }
       this.ctrl?.tick?.(delta);
@@ -2210,6 +2236,30 @@ export class WorkshopScene3D {
       }
       w.userData.hands[0].rotation.z = working ? Math.sin(t * 8 + p) * 0.45 : 0;
       w.userData.hands[1].rotation.z = working ? -Math.sin(t * 8 + p) * 0.45 : 0;
+    }
+  }
+
+  animateCustomers() {
+    const t = this.time;
+    for (const customer of this.customerMeshes) {
+      const p = customer.userData.phase;
+      const order = customer.userData.order;
+      const urgent = order && order.patienceMax < 9999 && order.remaining < order.patienceMax * 10 * 0.25;
+      const celebrating = t < (customer.userData.celebrateUntil || 0);
+      customer.userData.apron.material.color.setHex(urgent ? 0xd7a2a0 : 0xfff4de);
+      if (celebrating) {
+        const hop = Math.max(0, Math.sin((1.1 - (customer.userData.celebrateUntil - t)) * Math.PI * 2.2));
+        customer.position.y = hop * 0.24;
+        customer.rotation.z = Math.sin(t * 12 + p) * 0.12;
+        customer.userData.hands[0].rotation.z = -0.8;
+        customer.userData.hands[1].rotation.z = 0.8;
+        continue;
+      }
+      const pace = urgent ? 5.5 : 2.2;
+      customer.position.y = Math.max(0, Math.sin(t * pace + p)) * (urgent ? 0.055 : 0.025);
+      customer.rotation.z = urgent ? Math.sin(t * 6 + p) * 0.055 : Math.sin(t * 1.3 + p) * 0.018;
+      customer.userData.hands[0].rotation.z = urgent ? Math.sin(t * 8 + p) * 0.22 : 0;
+      customer.userData.hands[1].rotation.z = urgent ? -Math.sin(t * 8 + p) * 0.22 : 0;
     }
   }
 
