@@ -514,30 +514,31 @@ export class WorkshopScene3D {
   // meadow, so the board reads as part of a larger world. Margins are never buildable.
   addBorderScenery() {
     const { gridW, gridH } = this.level;
+    const shrubs = [];
+    const trees = [];
     for (const z of [0.55, gridH - 0.55]) {
       for (let i = 0, x = 2.5; x < gridW - 2; x += 1, i++) {
         if (i % 9 === 4) {
           this.addFlowerPatch(this.decorRoot, x, z);
           continue;
         }
-        const shrub = new THREE.Group();
-        shrub.position.set(x, 0.14, z);
-        this.decorRoot.add(shrub);
         for (const [dx, dz, size, tint] of [[-0.28, 0, 0.38, 0x4d760d], [0.05, -0.06, 0.48, 0x5e8a33], [0.34, 0.02, 0.36, 0x708549]]) {
-          const leaf = new THREE.Mesh(blobGeo, this.mat(tint));
-          leaf.position.set(dx, 0.35, dz);
-          leaf.scale.set(size * 1.25, size * 0.82, size);
-          leaf.castShadow = true;
-          shrub.add(leaf);
+          shrubs.push({ x: x + dx, y: 0.49, z: z + dz, size, tint });
         }
+      }
+    }
+    this.addBorderShrubs(shrubs);
+    for (let z = 3; z < gridH - 2; z += 5) {
+      for (const [x, scale, fruit] of [[0.9, 0.9, z % 2 === 0], [gridW - 1.0, 0.82, true]]) {
+        trees.push({ x, z: z + 0.5, base: 0.14, scale, fruit, phase: (x * 12.9898 + z * 78.233) % (Math.PI * 2) });
       }
     }
     let seed = 11;
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const cx = gridW / 2;
     const cz = gridH / 2;
-    const trees = [];
-    for (let tries = 0; tries < 900 && trees.length < 80; tries++) {
+    const borderTreeCount = trees.length;
+    for (let tries = 0; tries < 900 && trees.length < borderTreeCount + 80; tries++) {
       const a = rnd() * Math.PI * 2;
       const r = 12 + rnd() * (this.islandRadius - 14);
       const x = cx + Math.cos(a) * r;
@@ -552,6 +553,27 @@ export class WorkshopScene3D {
       });
     }
     this.addForestBatches(trees);
+  }
+
+  addBorderShrubs(shrubs) {
+    if (!shrubs.length) return;
+    const mesh = new THREE.InstancedMesh(blobGeo, this.mat(0xffffff), shrubs.length);
+    const dummy = this.forestDummy;
+    const color = new THREE.Color();
+    for (let i = 0; i < shrubs.length; i++) {
+      const shrub = shrubs[i];
+      dummy.position.set(shrub.x, shrub.y, shrub.z);
+      dummy.scale.set(shrub.size * 1.25, shrub.size * 0.82, shrub.size);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(i, dummy.matrix);
+      mesh.setColorAt(i, color.setHex(shrub.tint));
+    }
+    mesh.instanceMatrix.needsUpdate = true;
+    if (mesh.instanceColor) mesh.instanceColor.needsUpdate = true;
+    mesh.castShadow = true;
+    mesh.receiveShadow = true;
+    mesh.frustumCulled = false;
+    this.decorRoot.add(mesh);
   }
 
   addForestBatches(trees) {
