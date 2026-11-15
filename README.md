@@ -2,7 +2,7 @@
 
 A cozy 3D conveyor-routing tycoon. Build a food workshop, route the belts, serve the market, and grow a town through an ongoing saga. The shared Vite + Three.js codebase builds for web, Windows Electron, and Android Capacitor.
 
-The seven-stage opening campaign teaches basic production, split routing, merging, and a wheat-to-tart bakery chain before Town mode unlocks. Town mode keeps the workshop layout and progress, grows through an uncapped level track, and continues with repeatable saga chapters. Weekly goals and fast-delivery bonuses add optional goals without order failure. Story progress, weekly goals, and the active saga chapter are stored in the local save.
+The seven-stage opening campaign teaches basic production, split routing, merging, and a wheat-to-tart bakery chain before Town mode unlocks. Town mode keeps the workshop layout and progress, grows through an uncapped level track, and continues with repeatable saga chapters. Weekly goals, fast-delivery bonuses, and optional Rush Hour add variety without order failure. Story progress, weekly goals, the active saga chapter, and Rush Hour timers are stored in the local save.
 
 ## Run it
 
@@ -46,7 +46,9 @@ The suite uses Node's built-in test runner, so it needs no extra dependencies. T
 | Place / select | Click or tap |
 | Rotate placement | `R` or the rotate button |
 | Cancel placement | `Esc` |
-| Pan | Arrow keys, touch drag, right/middle mouse drag, or the camera cluster |
+| Pan | Arrow keys outside the focused world, touch drag, right/middle mouse drag, or the camera cluster |
+| Move the keyboard world cursor | Arrow keys when the world canvas is focused |
+| Place / select at keyboard cursor | `Enter`; focus the world with `G` |
 | Rotate the 3D world around its vertical axis | Horizontal left-drag; two-finger twist on touch |
 | Zoom | `+` / `-`, mouse wheel, or the camera cluster |
 | Pause / resume | `Space` or `P` |
@@ -71,7 +73,7 @@ src/styles.css        design system and responsive layout
 tests/                Node unit tests for simulation, state, objectives, reports and saves
 scripts/              authored-content validator
 .github/workflows/    CI: test, validate and build
-prd.md                canonical product requirements (v4.6)
+prd.md                canonical product requirements (v4.7)
 ```
 
 ## Save data
