@@ -1,4 +1,3 @@
-import { WorkshopScene3D } from './render/scene3d.js';
 import { LEVEL_BY_ID, isBuildable } from './data/levels.js';
 import { BUILDINGS, SIM } from './data/buildings.js';
 import { ITEMS } from './data/items.js';
@@ -120,14 +119,14 @@ class Controller {
   ensureGame() {
     if (this.sceneReady) return Promise.resolve(this.scene);
     if (this.scenePromise) return this.scenePromise;
-    this.scenePromise = new Promise((resolve, reject) => {
+    this.scenePromise = import('./render/scene3d.js').then(({ WorkshopScene3D }) => new Promise((resolve, reject) => {
       this.resolveScene = resolve;
       try {
         this.game = new WorkshopScene3D(this);
       } catch (err) {
         reject(err);
       }
-    });
+    }));
     return this.scenePromise;
   }
 
