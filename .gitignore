@@ -4,6 +4,14 @@
 # Build output and dependencies
 /node_modules/
 /dist/
+/release/
+/android/.gradle/
+/android/local.properties
+/android/**/build/
+/android/.idea/
+/android/capacitor-cordova-android-plugins/
+/android/app/src/main/assets/public/
+/android/app/src/main/assets/capacitor.config.json
 
 # Local tooling and OS junk
 .qoder/

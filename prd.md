@@ -1,7 +1,7 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.5 (supersedes v4.4 and all earlier drafts)
+**Version:** 4.6 (supersedes v4.5 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
@@ -13,6 +13,14 @@
 |---|---|
 | 1 | Added a controlled Splitter and Merger, plus a wheat-to-flour fruit-tart chain with three authored teaching levels before the persistent Town unlock. |
 | 2 | Expanded content tables, Town unlocks and save migration to cover the added router state and fruit-tart order progress; advanced the save schema to v4. |
+
+### Changes from v4.5
+
+| # | Change |
+|---|---|
+| 1 | Added the keyboard-only world control map, system reduced-motion handling, and root-relative text sizing to the accessibility requirements. |
+| 2 | Specified lazy loading for the Three.js scene and native save mirrors for Electron and Capacitor builds. |
+| 3 | Set Android to landscape, API 26 minimum, and no backup or network permissions; documented Java 21+ and signing-key requirements for local APK builds. |
 
 ### Changes from v4.3
 
@@ -531,8 +539,8 @@ Stores the persistent Town layout separately from the currently active story lev
 - **Saved:** current level, placed objects and their positions/upgrades, buffers and in-flight items (including freshness timers and refreeze count), coins, reputation, unlocked levels, completed objectives, cream used this level, settings, worker assignments.
 - **Autosave triggers:** placement changes, completed orders, level completion, settings changes, and a 10-second heartbeat during active play. Writes are debounced 2 seconds.
 - **Format:** one versioned JSON document, a previous-good backup slot, and one validated daily recovery snapshot, accessed through a single `SaveStore` interface. Update the daily snapshot at most once per 24 hours of active play. `SAVE_VERSION` is one constant with an explicit migration function per version bump. Every build reads and writes identical schemas.
-- **Platform adapters:** web writes IndexedDB only. Windows (Electron) writes IndexedDB in the `userData` partition and mirrors the JSON under `%APPDATA%/LittleBatchWorks/saves/`. Android (Capacitor) writes IndexedDB and mirrors the JSON to the app's documents directory via the Filesystem plugin.
-- **Android storage caution:** WebView storage can be evicted under memory pressure. On launch, if IndexedDB is empty but the JSON mirror exists, restore from the mirror and inform the player once.
+- **Platform adapters:** web writes IndexedDB only. Windows (Electron) writes IndexedDB in Electron's `userData` partition and mirrors the JSON in that same per-user app-data directory. Android (Capacitor) writes IndexedDB and mirrors the JSON to the private app data directory via the Filesystem plugin.
+- **Native storage caution:** WebView storage can be evicted under memory pressure. On launch, if IndexedDB is empty but the JSON mirror exists, restore from the mirror.
 - **Portability:** a save file copied between builds must load, since migrations and content IDs are shared.
 - **Validation:** saves are untrusted input. Validate schema, types, item IDs, recipe IDs, tile bounds, and coin/reputation ranges before loading; reject unknown content IDs and clamp out-of-range values.
 - **Recovery:** validate the current save, previous-good slot, daily snapshot, and native JSON mirror where available; restore the newest valid copy and explain the recovery. If every local copy is invalid or missing, show a clear explanation and offer export of the damaged save plus an explicit "Start fresh" path. Never silently wipe or claim that progress can be recovered after every local copy has been erased.
@@ -640,7 +648,7 @@ Continue / New Game, level selection with chapter progress, settings, credits, a
 - Click/tap to select; movement over 5 CSS px total (|dx| + |dy|) cancels the click and starts orbit. Right-drag or Shift-drag pans; wheel (toward the pointer) or +/− buttons zooms.
 - **Touch (Android):** tap to select and place; one-finger movement over 5 CSS px total starts orbit; two-finger pinch zooms, twist rotates, and two-finger drag pans. An explicit on-screen cancel is available for placement. No action depends on hover. Selection, sell, and reset use a bottom confirm sheet with large targets.
 - Build placement is click-to-place per tile; click-drag belt painting is a post-MVP enhancement.
-- `Space` pauses, `Esc` closes a panel or opens pause, `B` toggles build mode, arrows pan, `+`/`−` zoom.
+- `Space` pauses, `Esc` closes a panel or opens pause, `B` focuses the build menu, arrows move the grid cursor while the world canvas is focused and pan otherwise, `Enter` places/selects, `R` rotates, `G` focuses the world, and `+`/`−` zoom.
 - Input mode is detected at startup: key hints on web/Windows, gesture hints on Android. Below 800 CSS px wide, Build, Orders, and Inspector become mutually exclusive scrollable sheets or full-screen panels instead of pinned side panels; the status bar stays compact and visible.
 - Destructive actions (sell, reset level, reset save, remove item) require confirmation; selling shows the exact refund first.
 - Hover is never the only access to critical explanation — everything readable on hover is also available by selecting.
@@ -656,11 +664,12 @@ Continue / New Game, level selection with chapter progress, settings, credits, a
 - Original title treatment, logo, world map, characters, buildings, signs, UI icons, and item art.
 - A modular voxel model set with idle, working, and blocked states for every production machine.
 - Item silhouettes must be distinguishable at overview zoom; exaggerate shape and color slightly for clarity.
-- Item icons, socket labels, and status badges stay legible at 640 × 360; UI text is at least 14 px at 1× scale.
-- Real-time shadows and block highlights reinforce 3D depth without hiding tile connections.
+- Item icons, socket labels, and status badges stay legible at 640 × 360; UI text uses rem sizing and scales with the browser root size.
+- Real-time shadows follow the camera focus and block highlights reinforce 3D depth without hiding tile connections.
+- A slow daytime-to-evening shift warms the sun, sky, and fog; reduced motion holds the bright daytime palette.
 - No penguins, no source-brand clothing, poses, or styling. Final assets are reviewed against the reference image before release.
 - **Palette:** lively grass green, sky blue, pastel blue machinery, warm cream, fruit colors, and bright market accents. Mint remains the cold-chain accent.
-- **Belts:** bright blue rollers with metal rails, clear direction markers, and voxel carriers.
+- **Belts:** bright blue rollers with metal rails, clear direction markers, and voxel carriers; the slats visibly roll while the simulation runs.
 - **Freezer:** a bold pastel-blue cold room with a clear thermometer and frost accents, designed as an original voxel building.
 
 ### Style direction and comparable titles (v4.1)
@@ -725,7 +734,7 @@ Every item must be signed off by a reviewer who has compared the final assets si
 
 ### Audio
 
-- One gentle looping market/workshop track; independent music and SFX volumes.
+- A gentle layered workshop score combines a soft lead, held harmony, and warm bass. The chord progression changes for Town, and a light ornament layer responds to a busy order board. Independent music and SFX volumes remain available.
 - Distinct short cues for: placement, production complete, machine blocked, order complete, customer leave, unlock, error, melt warning.
 - Ambient layer (birds, steam, distant bells) is subtle and optional.
 - No persistent alarms; blockage cues are informative and quiet.
@@ -840,6 +849,7 @@ These are starting values for M2, tuned during M3. All live in data files.
 | Security | Saves treated as untrusted input with schema and bounds validation |
 | Localization readiness | All UI strings in external string files; no text baked into art; English ships first |
 | Packaging and release | Three reproducible artifacts — web bundle, signed EXE, signed APK — built from one commit with version stamping and published checksums |
+| Native build tools | Windows x64 packaging uses Electron and electron-builder; Android uses Capacitor, Gradle, Android SDK 36, and Java 21 or newer. Release APK signing keys are supplied outside the repository through environment variables. |
 | Windows compatibility | Windows 10 and 11 x64; per-user install without admin rights; runs with networking disabled; no SmartScreen-blocking malware behavior |
 | Android compatibility | Android 8.0+ (API 26) on arm64-v8a and armeabi-v7a; WebGL required; no dangerous permissions requested |
 | Offline | Game loop, saves, and audio work with network access disabled in every build; no CDN-hosted fonts or assets |
@@ -1083,5 +1093,8 @@ This document merges earlier drafts. Where they conflicted, the call below is au
 | 47 | Request for real physics | **Cosmetic spring and particle layer only; no rigid-body engine in gameplay** | Keeps determinism, saves, and Android size and battery under control while delivering the visible bounce and weight |
 | 48 | New style notes (cute isometric pastel look, comparable titles) arrived in `suggestions.md` | **Adopt the mood as a style direction (chibi characters, clean pastel fills, shape-first readability) translated into our 3D rounded-block look; keep `suggestions.md` a non-binding reference** | Gives artists a concrete, checkable target without importing any source artwork or letting a loose note override the PRD |
 | 49 | "Chibi" characters could drift toward the source brand's penguin mascots | **Require original non-penguin species with a design sheet per role, and add a checklist item** | Keeps the cute character direction inside the IP boundary |
+| 50 | A short campaign did not teach or unlock the bakery line and explicit routing devices | **Add two routing lessons and one wheat-to-tart bakery level before Town; move Town unlock to level 6** | Makes the tycoon progression easier to understand and gives the story a clear opening arc |
+| 51 | Native shells needed save portability and offline-safe storage | **Use Electron per-user `userData` and Capacitor's app-private data mirror with the shared versioned JSON document** | Lets the same progress survive app restarts without adding accounts, cloud sync, or external permissions |
+| 52 | Keyboard play could not place or select world objects | **Make the canvas focusable with an arrow-key grid cursor, Enter, R, and Escape controls** | Keeps the world buildable without a pointer while preserving visible focus |
 
 **Superseded documents:** Frostline Factory v0.1, Little Batch Works v1.0, PRD 2.0, `prd-merged.md`, v3.1, v3.2, and the v3.3 state of this file. Retain for history; do not edit as sources of truth.

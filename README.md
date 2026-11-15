@@ -1,6 +1,6 @@
 # Little Batch Works
 
-A cozy 3D voxel conveyor-routing tycoon. Build a food workshop, route the belts, serve the market, and grow a town through an ongoing saga. This repository contains the **web build** (Vite + Three.js, vanilla JavaScript).
+A cozy 3D conveyor-routing tycoon. Build a food workshop, route the belts, serve the market, and grow a town through an ongoing saga. The shared Vite + Three.js codebase builds for web, Windows Electron, and Android Capacitor.
 
 The seven-stage opening campaign teaches basic production, split routing, merging, and a wheat-to-tart bakery chain before Town mode unlocks. Town mode keeps the workshop layout and progress, grows through an uncapped level track, and continues with repeatable saga chapters. Weekly goals and fast-delivery bonuses add optional goals without order failure. Story progress, weekly goals, and the active saga chapter are stored in the local save.
 
@@ -17,6 +17,15 @@ npm run dev        # http://localhost:5173
 npm run build      # static output in dist/
 npm run preview    # serve the production build
 ```
+
+## Native builds
+
+```bash
+npm run build:windows   # Windows x64 NSIS installer and portable .exe in release/
+npm run build:android   # APK in release/Little-Batch-Works.apk
+```
+
+The Android build needs Android Studio's SDK and a Java 21+ JDK installed. On Windows, the script detects the usual Android SDK folder and a modern JDK under `Program Files`; on other systems, configure `ANDROID_HOME` and `JAVA_HOME`. With no signing variables set, it produces a debug-signed APK for sideloading. To make a release-signed APK, set `LBW_ANDROID_KEYSTORE`, `LBW_ANDROID_STORE_PASSWORD`, `LBW_ANDROID_KEY_ALIAS`, and `LBW_ANDROID_KEY_PASSWORD` before running the same command. Android and Windows keep a JSON mirror of the shared save document in their app-private data folders.
 
 The build is fully offline: voxel models are built from Three.js geometry, all audio is synthesised with WebAudio, and there are no network requests or third-party assets.
 
@@ -62,7 +71,7 @@ src/styles.css        design system and responsive layout
 tests/                Node unit tests for simulation, state, objectives, reports and saves
 scripts/              authored-content validator
 .github/workflows/    CI: test, validate and build
-prd.md                canonical product requirements (v4.5)
+prd.md                canonical product requirements (v4.6)
 ```
 
 ## Save data

@@ -260,7 +260,7 @@ export const LEVELS = [
       { type: 'counter', x: 15, y: 8, rot: 0 },
     ],
     preBelts: [],
-    objective: { kind: 'orders', count: 4, byType: { washedPeach: 4 }, text: 'Serve 4 Peach Cups through both routes' },
+    objective: { kind: 'orders', count: 4, byType: { washedPeach: 4 }, requireObjects: { splitter: 1, washer: 2 }, text: 'Build a Splitter and two Washers, then serve 4 Peach Cups through both routes' },
     optional: [
       { id: 'noLeave', label: 'No customer leaves', kind: 'noCustomerLeft' },
       { id: 'noBlock30', label: 'No machine blocked for 30 s', kind: 'noBlock30' },
@@ -298,7 +298,7 @@ export const LEVELS = [
       { type: 'counter', x: 15, y: 8, rot: 0 },
     ],
     preBelts: [],
-    objective: { kind: 'orders', count: 6, byType: { washedPeach: 3, washedApple: 3 }, text: 'Serve 3 Peach Cups and 3 Apple Cups through the Merger' },
+    objective: { kind: 'orders', count: 6, byType: { washedPeach: 3, washedApple: 3 }, requireObjects: { merger: 1, washer: 2 }, text: 'Build a Merger and two Washers, then serve 3 Peach Cups and 3 Apple Cups' },
     optional: [
       { id: 'noLeave', label: 'No customer leaves', kind: 'noCustomerLeft' },
       { id: 'noBlock30', label: 'No machine blocked for 30 s', kind: 'noBlock30' },

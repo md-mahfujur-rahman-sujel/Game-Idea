@@ -8,6 +8,11 @@ export function evaluatePrimary(level, s) {
     }
   }
   if (obj.minBase && s.counters.baseOrders < obj.minBase) return false;
+  if (obj.requireObjects) {
+    for (const [type, count] of Object.entries(obj.requireObjects)) {
+      if (s.objects.filter(object => object.type === type).length < count) return false;
+    }
+  }
   return true;
 }
 
@@ -37,5 +42,13 @@ export function primaryProgress(level, s) {
   } else if (obj.minBase) {
     extra = `puree ${Math.min(s.counters.baseOrders, obj.minBase)}/${obj.minBase}`;
   }
+  if (obj.requireObjects) {
+    const missing = Object.entries(obj.requireObjects)
+      .filter(([type, count]) => s.objects.filter(object => object.type === type).length < count)
+      .map(([type, count]) => `${BUILDING_LABELS[type] || type} ${s.objects.filter(object => object.type === type).length}/${count}`);
+    if (missing.length) extra = [extra, ...missing].filter(Boolean).join(' · ');
+  }
   return { done, total: obj.count || 0, extra };
 }
+
+const BUILDING_LABELS = { splitter: 'Splitter', merger: 'Merger', washer: 'Washers' };

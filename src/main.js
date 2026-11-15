@@ -159,6 +159,8 @@ class Controller {
     // rather than dereferencing a document that does not exist yet.
     if (!this.doc) return;
     this.level = level;
+    this.audio.setMood(level.town);
+    this.audio.setEnergy(0);
     let state = null;
     let resume = opts.resume !== false && this.doc.level?.levelId === id;
     if (level.town && opts.resume !== false) {
@@ -228,6 +230,7 @@ class Controller {
     };
     canvas.onblur = () => scene.setKeyboardCursor(this.keyboardCursor, false);
     scene.refreshAll();
+    this.audio.startMusic();
     this.hud.lastTutorialKey = '';
     this.hud.renderBuild();
     this.hud.setBuildMode(null, 0);
@@ -377,7 +380,10 @@ class Controller {
   }
 
   exitToMenu() {
-    this.saveNow().then(() => this.showMainMenu());
+    this.saveNow().then(() => {
+      this.audio.stopMusic();
+      this.showMainMenu();
+    });
   }
 
   // -------------------------------------------------------------- settings
@@ -492,6 +498,8 @@ class Controller {
     if (!profile) return;
     recordOrder(profile, order);
     this.grantXp(orderXp(order));
+    this.scene?.celebrateWorkers();
+    this.audio.setEnergy(Math.min(1, (this.s?.orders.active.length || 0) / 3));
     this.hud?.refresh();
   }
 
@@ -1561,7 +1569,7 @@ class Controller {
     if (!this.doc) return;
     this.audio.unlock();
     this.audio.applySettings(this.settings);
-    this.audio.startMusic();
+    if (this.s) this.audio.startMusic();
   }
 
   installLifecycle() {

@@ -1,7 +1,9 @@
 // Small procedural audio bus: original cues + a gentle market loop.
 // No external assets, so the build stays fully offline.
 
-const SCALE = [0, 2, 4, 7, 9, 12, 9, 7, 4, 2, 0, 4, 7, 9, 7, 4];
+const MELODY = [0, 2, 4, 7, 9, 7, 4, 2, 5, 7, 9, 12, 9, 7, 5, 2];
+const CAMPAIGN_ROOTS = [0, 5, 7, 4];
+const TOWN_ROOTS = [0, 3, 5, 4];
 
 export class AudioBus {
   constructor() {
@@ -14,6 +16,8 @@ export class AudioBus {
     this.muted = false;
     this.timer = null;
     this.step = 0;
+    this.mood = 'campaign';
+    this.energy = 0.25;
     this.lastCue = {};
   }
 
@@ -41,7 +45,7 @@ export class AudioBus {
     if (typeof sfx === 'number') this.sfx = sfx;
     if (typeof muted === 'boolean') this.muted = muted;
     if (this.ctx) {
-      this.musicGain.gain.value = this.music * 0.3;
+      this.musicGain.gain.setTargetAtTime(this.music * 0.3, this.ctx.currentTime, 0.08);
       this.sfxGain.gain.value = this.sfx * 0.5;
       this.master.gain.value = this.muted ? 0 : 1;
     }
@@ -96,13 +100,33 @@ export class AudioBus {
     this.step = 0;
     this.timer = setInterval(() => {
       if (!this.ctx || this.muted || this.music <= 0.001) return;
-      const semi = SCALE[this.step % SCALE.length];
-      const freq = 196 * Math.pow(2, semi / 12);
-      this.note(freq, 0.9, 'sine', 0.055, this.musicGain);
-      if (this.step % 8 === 0) this.note(98, 1.4, 'sine', 0.04, this.musicGain);
-      if (this.step % 16 === 6) this.note(freq * 2, 0.6, 'triangle', 0.022, this.musicGain);
+      const roots = this.mood === 'town' ? TOWN_ROOTS : CAMPAIGN_ROOTS;
+      const root = roots[Math.floor(this.step / 16) % roots.length];
+      const semi = MELODY[this.step % MELODY.length];
+      const freq = 261.63 * Math.pow(2, (root + semi) / 12);
+
+      // Soft felt-piano-like melody, a held triangle chord, and a warm low pulse.
+      this.note(freq, 0.48, 'sine', 0.032, this.musicGain);
+      if (this.step % 4 === 0) {
+        const chord = this.step % 8 === 0 ? [0, 4, 7] : [0, 3, 7];
+        chord.forEach((tone, index) => {
+          const chordRoot = 130.81 * Math.pow(2, root / 12);
+          this.note(chordRoot * Math.pow(2, tone / 12), 1.75, 'triangle', index === 0 ? 0.012 : 0.007, this.musicGain);
+        });
+        this.note(65.41 * Math.pow(2, root / 12), 1.15, 'sine', 0.026, this.musicGain);
+      }
+      if (this.step % 16 === 6) this.note(freq * 2, 0.72, 'triangle', 0.014, this.musicGain);
+      if (this.energy > 0.65 && this.step % 8 === 3) this.note(freq * 1.5, 0.22, 'sine', 0.009, this.musicGain);
       this.step++;
-    }, 620);
+    }, 560);
+  }
+
+  setMood(town = false) {
+    this.mood = town ? 'town' : 'campaign';
+  }
+
+  setEnergy(value = 0) {
+    this.energy = Math.max(0, Math.min(1, Number.isFinite(value) ? value : 0));
   }
 
   stopMusic() {

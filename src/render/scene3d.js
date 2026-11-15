@@ -55,6 +55,7 @@ export class WorkshopScene3D {
     this.pathTone = '';
     this.hintTiles = [];
     this.time = 0;
+    this.dayMix = 0;
     this.speed = 1;
     this.lastFrame = 0;
     this.drag = null;
@@ -75,7 +76,12 @@ export class WorkshopScene3D {
     this.world = new THREE.Scene();
     // A slightly deeper pastel blue leaves room for the warmer machinery without
     // washing the greens out.
-    this.world.background = new THREE.Color(0xa8d0f5);
+    this.daySky = new THREE.Color(0xa8d0f5);
+    this.eveningSky = new THREE.Color(0xc4929d);
+    this.daySun = new THREE.Color(0xfff4de);
+    this.eveningSun = new THREE.Color(0xffc68c);
+    this.tmpColor = new THREE.Color();
+    this.world.background = this.daySky.clone();
     this.world.fog = new THREE.Fog(0xa8d0f5, 105, 250);
     this.camera = new THREE.PerspectiveCamera(40, 1, 0.1, 450);
     this.cameraTarget = new THREE.Vector3(18, 0, 12);
@@ -111,7 +117,7 @@ export class WorkshopScene3D {
 
     // Keep the fill cool but low, and let a stronger warm sun carry the light:
     // shadowed sides and seams fall into deeper green while the board stays bright.
-    this.world.add(new THREE.HemisphereLight(0xdff0ff, 0xb8c98a, 1.5));
+    this.hemi = new THREE.HemisphereLight(0xdff0ff, 0xb8c98a, 1.5);
     const sun = new THREE.DirectionalLight(0xfff4de, 3.0);
     sun.position.set(-25, 42, 20);
     sun.castShadow = true;
@@ -122,7 +128,7 @@ export class WorkshopScene3D {
     sun.shadow.camera.bottom = -48;
     sun.shadow.bias = -0.0003;
     this.sun = sun;
-    this.world.add(sun, sun.target);
+    this.world.add(this.hemi, sun, sun.target);
 
     this.groundRoot = new THREE.Group();
     this.decorRoot = new THREE.Group();
@@ -1222,12 +1228,13 @@ export class WorkshopScene3D {
 
   // Chibi cast (PRD 9): big round head, tiny body, glossy eyes, blush. Every species is an
   // original design: Mo the mole, Sprig the squirrel, Pip the rabbit, and round-eared neighbours.
-  addWorker(x, z, bodyColor, headColor, role = 'worker') {
+  addWorker(x, z, bodyColor, headColor, role = 'worker', stationId = null) {
     const g = new THREE.Group();
     g.position.set(x, 0, z);
     g.userData.baseY = 0;
     g.userData.phase = Math.random() * Math.PI * 2;
     g.userData.role = role;
+    g.userData.stationId = stationId;
     const blob = (px, py, pz, sx, sy, sz, color, shadow = true) => {
       const m = new THREE.Mesh(sphereGeo, this.mat(color));
       m.position.set(px, py, pz);
@@ -1238,9 +1245,14 @@ export class WorkshopScene3D {
     };
     // body, apron, feet, hands
     blob(0, 0.3, 0, 0.46, 0.44, 0.4, bodyColor);
-    blob(0, 0.27, 0.13, 0.3, 0.3, 0.2, COLORS.cream);
+    const apron = blob(0, 0.27, 0.13, 0.3, 0.3, 0.2, COLORS.cream);
+    g.userData.apron = apron;
     blob(-0.11, 0.05, 0.05, 0.16, 0.1, 0.22, 0x5a4638);
     blob(0.11, 0.05, 0.05, 0.16, 0.1, 0.22, 0x5a4638);
+    g.userData.hands = [
+      blob(-0.31, 0.48, 0.08, 0.12, 0.11, 0.13, bodyColor),
+      blob(0.31, 0.48, 0.08, 0.12, 0.11, 0.13, bodyColor),
+    ];
     blob(-0.27, 0.32, 0.04, 0.15, 0.15, 0.15, headColor);
     blob(0.27, 0.32, 0.04, 0.15, 0.15, 0.15, headColor);
     // head
@@ -1258,11 +1270,26 @@ export class WorkshopScene3D {
         blob(sx * 0.13, 1.22, 0, 0.14, 0.46, 0.12, headColor);
         blob(sx * 0.13, 1.2, 0.03, 0.07, 0.3, 0.06, 0xf2b6bd, false);
       }
-    } else if (role === 'worker') {
+    } else if (role === 'worker' || role === 'presser') {
       for (const sx of [-1, 1]) blob(sx * 0.2, 1.1, 0, 0.14, 0.2, 0.1, headColor);
       blob(0, 0.36, -0.28, 0.26, 0.5, 0.26, 0xc77f45);
     } else if (role === 'mole') {
       for (const sx of [-1, 1]) blob(sx * 0.27, 1.02, 0, 0.13, 0.13, 0.08, bodyColor);
+    } else if (role === 'baker') {
+      this.cube(g, 0, 1.12, 0, 0.48, 0.11, 0.38, COLORS.cream);
+      blob(0, 1.24, -0.02, 0.2, 0.18, 0.16, COLORS.cream);
+      blob(-0.16, 1.17, 0.01, 0.15, 0.13, 0.14, COLORS.cream);
+      blob(0.16, 1.17, 0.01, 0.15, 0.13, 0.14, COLORS.cream);
+    } else if (role === 'washer') {
+      this.cube(g, 0, 1.08, 0, 0.55, 0.12, 0.36, 0x5aaef2);
+      blob(0, 1.15, 0.02, 0.23, 0.08, 0.18, 0xb4d4ff);
+    } else if (role === 'brewer' || role === 'miller') {
+      this.cube(g, 0, 1.1, 0, 0.42, 0.12, 0.34, 0x708549);
+      blob(-0.08, 1.18, 0, 0.09, 0.17, 0.06, 0x97b96a).rotation.z = -0.35;
+      blob(0.08, 1.18, 0, 0.09, 0.17, 0.06, 0x97b96a).rotation.z = 0.35;
+    } else if (role === 'freezer') {
+      blob(-0.31, 0.94, 0, 0.11, 0.17, 0.12, 0xadc1be);
+      blob(0.31, 0.94, 0, 0.11, 0.17, 0.12, 0xadc1be);
     } else {
       for (const sx of [-1, 1]) blob(sx * 0.26, 1.06, 0, 0.18, 0.18, 0.1, headColor);
     }
@@ -1277,12 +1304,28 @@ export class WorkshopScene3D {
     this.workerMeshes = [];
     if (!this.s) return;
     const orchard = this.s.objects.find(o => o.type === 'orchard');
-    const firstMachine = this.s.objects.find(o => BUILDINGS[o.type].kind === 'machine');
     const counter = this.s.objects.find(o => o.type === 'counter');
     if (orchard) this.addWorker(orchard.x + orchard.w + 0.3, orchard.y + 0.8, 0x8a5f4c, 0xb58a6c, 'mole');
-    if (firstMachine) this.addWorker(firstMachine.x + 0.9, firstMachine.y - 0.1, 0x4972a3, 0xb58a6c, 'worker');
     if (counter) this.addWorker(counter.x - 0.5, counter.y + counter.h + 0.2, 0x708549, 0xf0e4cf, 'rabbit');
+    const stationRoles = {
+      washer: ['washer', 0x4972a3, 0xb58a6c], press: ['presser', 0x8a5f4c, 0xd5a477],
+      brewer: ['brewer', 0x708549, 0xb58a6c], mixer: ['mixer', 0x8e4f53, 0xf0e4cf],
+      freezer: ['freezer', 0x6f918a, 0xb58a6c], flourMill: ['miller', 0x98783d, 0xd8b98d],
+      bakery: ['baker', 0x98783d, 0xf0e4cf],
+    };
+    this.s.objects
+      .filter(o => BUILDINGS[o.type].kind === 'machine' && !BUILDINGS[o.type].logic && stationRoles[o.type])
+      .slice(0, 6)
+      .forEach((o, index) => {
+        const [role, body, head] = stationRoles[o.type];
+        this.addWorker(o.x + o.w + 0.35, o.y + o.h - 0.15 + index * 0.025, body, head, role, o.id);
+      });
     this.rebuildCustomers();
+  }
+
+  celebrateWorkers() {
+    const until = this.time + 1.1;
+    for (const worker of this.workerMeshes) worker.userData.celebrateUntil = until;
   }
 
   rebuildCustomers() {
@@ -2007,6 +2050,7 @@ export class WorkshopScene3D {
     const delta = this.lastFrame ? Math.min(now - this.lastFrame, 100) : 16.7;
     this.lastFrame = now;
     this.time += delta / 1000;
+    this.updateDaylight(delta);
     if (!this.settings.reducedMotion) {
       for (const tree of this.windGroups) {
         const sway = Math.sin(this.time * 1.15 + tree.userData.windPhase) * 0.018;
@@ -2065,6 +2109,28 @@ export class WorkshopScene3D {
     this.renderer.render(this.world, this.camera);
   }
 
+  updateDaylight(delta) {
+    // A slow render-only day/evening cycle gives the town a warmer second mood.
+    // Reduced motion holds the world in its bright daytime look.
+    const phase = this.settings.reducedMotion ? 0 : (this.time % 240) / 240;
+    const target = (1 - Math.cos(phase * Math.PI * 2)) * 0.5;
+    const blend = Math.min(1, delta / 1800);
+    this.dayMix += (target - this.dayMix) * blend;
+    this.tmpColor.lerpColors(this.daySky, this.eveningSky, this.dayMix * 0.72);
+    this.world.background.copy(this.tmpColor);
+    this.world.fog.color.copy(this.tmpColor);
+    this.sun.color.lerpColors(this.daySun, this.eveningSun, this.dayMix * 0.7);
+    this.sun.intensity = 3 - this.dayMix * 0.8;
+    this.hemi.intensity = 1.5 - this.dayMix * 0.22;
+
+    // Keep the shadow camera centred around the moving view, snapped in broad steps
+    // so the shadow map follows without shimmering every sub-pixel pan.
+    const cx = Math.round(this.cameraTarget.x / 4) * 4;
+    const cz = Math.round(this.cameraTarget.z / 4) * 4;
+    this.sun.target.position.set(cx, 0, cz);
+    this.sun.position.set(cx - 25, 42, cz + 20);
+  }
+
   // Each role does a short looping job: the mole tends (sway), the squirrel tinkers
   // (quick tilts with pauses), the rabbit serves (a hop with pauses).
   animateWorkers() {
@@ -2072,18 +2138,34 @@ export class WorkshopScene3D {
     for (const w of this.workerMeshes) {
       const p = w.userData.phase;
       const role = w.userData.role;
+      const station = w.userData.stationId == null ? null : this.s?.objects.find(o => o.id === w.userData.stationId);
+      const working = station?.state === 'working';
+      const blocked = station?.state === 'blocked';
+      const celebrating = t < (w.userData.celebrateUntil || 0);
+      const activity = celebrating ? 1 : blocked ? 2 : working ? 0.7 : 0.15;
+      w.userData.apron.material.color.setHex(blocked ? 0xd7a2a0 : working ? 0xccebe7 : 0xfff4de);
+      if (celebrating) {
+        const hop = Math.max(0, Math.sin((1.1 - (w.userData.celebrateUntil - t)) * Math.PI * 2.2));
+        w.position.y = hop * 0.24;
+        w.rotation.z = Math.sin(t * 12 + p) * 0.12;
+        w.userData.hands[0].rotation.z = -0.8;
+        w.userData.hands[1].rotation.z = 0.8;
+        continue;
+      }
       if (role === 'mole') {
-        w.rotation.z = Math.sin(t * 1.6 + p) * 0.1;
+        w.rotation.z = Math.sin(t * 1.6 + p) * (blocked ? 0.18 : 0.1);
         w.position.y = Math.abs(Math.sin(t * 1.6 + p)) * 0.03;
-      } else if (role === 'rabbit') {
+      } else if (role === 'rabbit' || role === 'baker' || role === 'brewer') {
         const hop = Math.max(0, Math.sin(t * 2.2 + p));
-        w.position.y = hop > 0.75 ? (hop - 0.75) * 0.9 : 0;
-        w.rotation.z = 0;
+        w.position.y = hop > 0.75 ? (hop - 0.75) * 0.45 * activity : 0;
+        w.rotation.z = blocked ? Math.sin(t * 7 + p) * 0.14 : 0;
       } else {
         const pulse = Math.max(0, Math.sin(t * 2 + p));
-        w.rotation.z = pulse > 0.6 ? Math.sin(t * 22) * 0.12 : 0;
-        w.position.y = Math.sin(t * 2.4 + p) * 0.03;
+        w.rotation.z = blocked ? Math.sin(t * 7 + p) * 0.14 : pulse > 0.6 ? Math.sin(t * 22) * 0.12 * activity : 0;
+        w.position.y = Math.sin(t * 2.4 + p) * 0.03 * activity;
       }
+      w.userData.hands[0].rotation.z = working ? Math.sin(t * 8 + p) * 0.45 : 0;
+      w.userData.hands[1].rotation.z = working ? -Math.sin(t * 8 + p) * 0.45 : 0;
     }
   }
 

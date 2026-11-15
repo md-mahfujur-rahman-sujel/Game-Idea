@@ -14,7 +14,7 @@ const LS_KEYS = {
 };
 const DAY_MS = 24 * 60 * 60 * 1000;
 const PRIORITY = { [KEY]: 3, [BACKUP]: 2, [DAILY]: 1 };
-const STORAGE_PRIORITY = { idb: 2, local: 1 };
+const STORAGE_PRIORITY = { native: 3, idb: 2, local: 1 };
 
 function openDB() {
   return new Promise((resolve, reject) => {
@@ -62,6 +62,31 @@ export class SaveStore {
     this.db = null;
     this.mode = 'idb';
     this.lastError = null;
+    this.native = null;
+    this.nativeChecked = false;
+  }
+
+  async nativeSave() {
+    if (this.nativeChecked) return this.native;
+    this.nativeChecked = true;
+    if (typeof window === 'undefined') return null;
+    if (window.lbwDesktopSave) {
+      this.native = window.lbwDesktopSave;
+      return this.native;
+    }
+    if (window.Capacitor?.isNativePlatform?.()) {
+      try {
+        const { Filesystem, Directory, Encoding } = await import('@capacitor/filesystem');
+        this.native = {
+          read: async () => (await Filesystem.readFile({ path: 'little-batch-works-save.json', directory: Directory.Data, encoding: Encoding.UTF8 })).data,
+          write: async value => Filesystem.writeFile({ path: 'little-batch-works-save.json', directory: Directory.Data, encoding: Encoding.UTF8, data: value }),
+          clear: async () => Filesystem.deleteFile({ path: 'little-batch-works-save.json', directory: Directory.Data }),
+        };
+      } catch (err) {
+        this.lastError = String(err && err.message || err);
+      }
+    }
+    return this.native;
   }
 
   async init() {
@@ -94,6 +119,23 @@ export class SaveStore {
     } catch (err) {
       this.lastError = String(err && err.message || err);
     }
+    if (key === KEY) {
+      const native = await this.nativeSave();
+      if (native) {
+        try {
+          const raw = await native.read();
+          if (raw) {
+            try { copies.push({ key, storage: 'native', value: typeof raw === 'string' ? JSON.parse(raw) : raw }); }
+            catch { copies.push({ key, storage: 'native', raw, parseError: true }); }
+          }
+        } catch (err) {
+          // A missing mirror is normal on first launch; report other read failures.
+          if (!/not.?found|does not exist|no such file/i.test(String(err && err.message || err))) {
+            this.lastError = String(err && err.message || err);
+          }
+        }
+      }
+    }
     return copies;
   }
 
@@ -112,6 +154,13 @@ export class SaveStore {
       }
     }
     if (!stored) throw new Error(this.lastError || 'save-storage-unavailable');
+    if (key === KEY) {
+      const native = await this.nativeSave();
+      if (native) {
+        try { await native.write(JSON.stringify(value)); }
+        catch (err) { this.lastError = String(err && err.message || err); }
+      }
+    }
     return true;
   }
 
@@ -181,6 +230,15 @@ export class SaveStore {
     try {
       for (const key of Object.values(LS_KEYS)) localStorage.removeItem(key);
     } catch { /* Ignore unavailable local storage. */ }
+    const native = await this.nativeSave();
+    if (native) {
+      try { await native.clear(); }
+      catch (err) {
+        if (!/not.?found|does not exist|no such file/i.test(String(err && err.message || err))) {
+          this.lastError = String(err && err.message || err);
+        }
+      }
+    }
   }
 }
 

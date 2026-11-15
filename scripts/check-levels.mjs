@@ -241,7 +241,11 @@ function computeProducible(level) {
 
 function requiredBuildings(level, producible, allowed, orderItems) {
   const preplaced = new Set((level.preplaced || []).map(p => p.type));
-  const needed = new Set();
+  const needed = new Map();
+  const require = (type, count = 1) => {
+    const alreadyPlaced = (level.preplaced || []).filter(p => p.type === type).length;
+    needed.set(type, Math.max(needed.get(type) || 0, Math.max(0, count - alreadyPlaced)));
+  };
   const targets = new Set(orderItems);
   for (const type of Object.keys(level.objective?.byType || {})) targets.add(type);
 
@@ -252,14 +256,14 @@ function requiredBuildings(level, producible, allowed, orderItems) {
     const source = [...allowed].find(type =>
       BUILDINGS[type]?.kind === 'source' && BUILDINGS[type].outputs.some(out => out.item === item));
     if (source) {
-      if (!preplaced.has(source)) needed.add(source);
+      if (!preplaced.has(source)) require(source);
     } else {
       const options = RECIPES.filter(r => r.out === item && allowed.has(r.machine));
       const recipe = options.find(r => r.inputs.every(input => producible.has(input))) || options[0];
       if (!recipe) {
         fail(`level "${level.id}": no allowed building produces ${item}`);
       } else {
-        if (!preplaced.has(recipe.machine)) needed.add(recipe.machine);
+        if (!preplaced.has(recipe.machine)) require(recipe.machine);
         for (const input of recipe.inputs) visit(input);
       }
     }
@@ -267,6 +271,11 @@ function requiredBuildings(level, producible, allowed, orderItems) {
   };
 
   for (const item of targets) visit(item);
+  for (const [type, count] of Object.entries(level.objective?.requireObjects || {})) {
+    if (!BUILDINGS[type]) fail(`level "${level.id}": objective requires unknown building "${type}"`);
+    if (!isPositiveInt(count)) fail(`level "${level.id}": required building count for "${type}" must be a positive integer`);
+    require(type, count);
+  }
   return { needed, targets };
 }
 
@@ -310,11 +319,12 @@ function checkReachability(level) {
 
   const { needed } = requiredBuildings(level, producible, allowed, opening);
   let cost = 0;
-  for (const type of needed) {
+  for (const [type, count] of needed) {
+    if (!count) continue;
     if (!allowed.has(type) && !(level.preplaced || []).some(p => p.type === type)) {
       fail(`${at}: needed building "${type}" is neither available nor preplaced`);
     }
-    cost += BUILDINGS[type]?.cost || 0;
+    cost += (BUILDINGS[type]?.cost || 0) * count;
   }
   if (cost > level.startingCoins) {
     fail(`${at}: minimum build cost ${cost} exceeds starting coins ${level.startingCoins}`);
@@ -494,7 +504,10 @@ for (const level of LEVELS) {
     start: level.startingCoins,
     cost: result?.cost ?? 0,
     margin: level.startingCoins - (result?.cost ?? 0),
-    needed: [...(result?.needed || [])].join(', '),
+    needed: [...(result?.needed || [])]
+      .filter(([, count]) => count > 0)
+      .map(([type, count]) => count > 1 ? `${type} ×${count}` : type)
+      .join(', '),
   });
 }
 
