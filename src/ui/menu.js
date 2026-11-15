@@ -85,45 +85,51 @@ function masthead(doc) {
 export function renderMainMenu(root, ctx) {
   root.querySelectorAll('[data-layer="screen"]').forEach(el => el.remove());
   const { doc } = ctx;
+  const profile = doc.profile || {};
   const hasSave = !!doc.level;
   const level = hasSave ? LEVEL_BY_ID[doc.level.levelId] : null;
+  const townUnlocked = (profile.unlocked || []).includes('town');
+  const townLevel = Math.max(1, Math.floor(Number(profile.townLevel) || 1));
+  const chapterCount = Math.max(0, Math.floor(Number(profile.story?.chapter) || 0));
+  const ordersServed = Math.max(0, Math.floor(Number(profile.stats?.fulfilled) || 0));
+  const finishedLevels = Object.keys(profile.completed || {}).filter(id => LEVEL_BY_ID[id] && id !== 'town').length;
   const screen = shell(`
     ${masthead(doc)}
-    <section class="hero">
-      <div>
-        <h1>Build a little food workshop, then let it <em>hum</em>.</h1>
-        <p>Grow fruit and tea, route the belts, and serve the market. Short, cozy sessions with one clever twist: ice cream melts on the way.</p>
-        <div class="hero-actions">
+    <section class="home-hero">
+      <div class="home-welcome">
+        <div class="eyebrow"><span class="eyebrow-dot"></span> A COZY FACTORY SAGA</div>
+        <h1>A small workshop.<br><em>A town full of stories.</em></h1>
+        <p>Grow a food business one clever belt at a time. Learn the craft in the story campaign, then keep building Mosslight Market for as long as you like.</p>
+        <div class="home-actions">
           ${hasSave
-            ? `<button class="btn btn-primary" data-act="continue">Continue${level ? ` · ${escapeHtml(levelNumberLabel(level))}` : ''}</button>`
-            : `<button class="btn btn-primary" data-act="new">Start the tutorial</button>`}
-          <button class="btn" data-act="levels">Choose a level</button>
-          <button class="btn btn-quiet" data-act="how">How to play</button>
-          ${hasSave ? '<button class="btn btn-quiet" data-act="reset">Reset progress</button>' : ''}
+            ? `<button class="btn btn-primary home-continue" data-act="continue"><span>${icon('play')}</span><span><b>Continue playing</b><small>${escapeHtml(level ? level.town ? 'Your ongoing town saga' : `${levelNumberLabel(level)} · ${level.name}` : 'Your saved workshop')}</small></span><span class="action-arrow">${icon('arrow')}</span></button>`
+            : `<button class="btn btn-primary home-continue" data-act="new"><span>${icon('play')}</span><span><b>Begin your story</b><small>Start with a guided first workshop</small></span><span class="action-arrow">${icon('arrow')}</span></button>`}
+          <button class="btn btn-quiet" data-act="levels">Explore the story</button>
         </div>
-        <p class="hero-note">${hasSave
-          ? `Your workshop was saved ${doc.updatedAt ? timeAgo(doc.updatedAt) : 'recently'}. Progress lives on this device and works offline.`
-          : 'No account, no timers that punish you for leaving, fully offline.'}</p>
+        <div class="home-save-note"><span class="save-pip"></span>${hasSave
+          ? `Saved ${doc.updatedAt ? timeAgo(doc.updatedAt) : 'on this device'} · Your progress stays on this device.`
+          : 'No account needed · Your progress saves on this device.'}</div>
       </div>
-      <div class="hero-art">${HERO_ART}</div>
+      <aside class="saga-feature ${townUnlocked ? 'is-open' : 'is-locked'}">
+        <div class="saga-art">${HERO_ART}<div class="saga-art-shade"></div><span class="saga-art-label">MOSSLIGHT MARKET <i>✦</i></span></div>
+        <div class="saga-feature-copy">
+          <div class="feature-kicker">${townUnlocked ? 'YOUR ONGOING SAGA' : 'YOUR NEXT DESTINATION'}</div>
+          <h2>Mosslight Market</h2>
+          <p>${townUnlocked ? 'A persistent town, new neighbors, and a story that keeps unfolding as your workshop grows.' : 'Complete “A Fresh Batch” to carry your craft into a persistent town with neighbors, expansions, and new story goals.'}</p>
+          <button class="saga-link" data-act="${townUnlocked ? 'town' : 'levels'}">${townUnlocked ? 'Return to your town' : 'See the story path'} <span aria-hidden="true">↗</span></button>
+        </div>
+        <div class="saga-metrics">
+          <div><b>${townUnlocked ? `LV ${townLevel}` : `${finishedLevels}/6`}</b><span>${townUnlocked ? 'TOWN LEVEL' : 'STORY MAPS'}</span></div>
+          <div><b>${chapterCount}</b><span>CHAPTERS CLEARED</span></div>
+          <div><b>${ordersServed}</b><span>ORDERS SERVED</span></div>
+        </div>
+      </aside>
     </section>
-    <section class="home-grid">
-      <button class="home-card" data-act="levels">
-        <span class="hic">${icon('build')}</span>
-        <span><span class="h2">Workshop trail</span><span class="sp">Tutorial plus three authored levels, each with an optional challenge.</span></span>
-      </button>
-      <button class="home-card" data-act="settings">
-        <span class="hic">${icon('settings')}</span>
-        <span><span class="h2">Settings</span><span class="sp">Volume, reduced motion, grid and hint visibility.</span></span>
-      </button>
-      <button class="home-card" data-act="how">
-        <span class="hic">${icon('hand')}</span>
-        <span><span class="h2">How to play</span><span class="sp">Belts, sockets, and why the freezer is different.</span></span>
-      </button>
-      <button class="home-card" data-act="credits">
-        <span class="hic">${icon('sparkle')}</span>
-        <span><span class="h2">About</span><span class="sp">An original cozy factory game. Art, audio, and copy made for this project.</span></span>
-      </button>
+    <section class="home-tools" aria-label="More options">
+      <button class="home-tool" data-act="levels"><span class="tool-icon">${icon('build')}</span><span><b>Story campaign</b><small>Six handcrafted chapters</small></span><span class="tool-arrow">↗</span></button>
+      <button class="home-tool" data-act="settings"><span class="tool-icon">${icon('settings')}</span><span><b>Settings</b><small>Audio, comfort and controls</small></span><span class="tool-arrow">↗</span></button>
+      <button class="home-tool" data-act="how"><span class="tool-icon">${icon('hand')}</span><span><b>How to play</b><small>Routing, machines and orders</small></span><span class="tool-arrow">↗</span></button>
+      <button class="home-tool" data-act="credits"><span class="tool-icon">${icon('sparkle')}</span><span><b>About</b><small>Meet the workshop</small></span><span class="tool-arrow">↗</span></button>
     </section>
   `);
   screen.addEventListener('click', (e) => {
@@ -132,6 +138,7 @@ export function renderMainMenu(root, ctx) {
     if (act === 'continue') ctx.onContinue();
     else if (act === 'new') ctx.onNew();
     else if (act === 'levels') ctx.onLevels();
+    else if (act === 'town') ctx.onLevel('town');
     else if (act === 'settings') ctx.onSettings();
     else if (act === 'how') openHowTo();
     else if (act === 'credits') openCredits();
@@ -145,34 +152,47 @@ export function renderLevelSelect(root, ctx) {
   const { doc } = ctx;
   const unlocked = new Set(doc.profile.unlocked);
   const done = doc.profile.completed || {};
-  const cards = LEVELS.map((lv) => {
+  const storyLevels = LEVELS.filter(level => !level.town);
+  const groups = new Map();
+  storyLevels.forEach(level => {
+    const chapter = level.chapter || 'The Workshop Trail';
+    if (!groups.has(chapter)) groups.set(chapter, []);
+    groups.get(chapter).push(level);
+  });
+  const cards = [...groups.entries()].map(([chapter, levels]) => `
+    <section class="campaign-chapter">
+      <div class="campaign-chapter-head"><span class="chapter-rule"></span><span>${escapeHtml(chapter)}</span><span class="chapter-rule"></span></div>
+      <div class="campaign-grid">${levels.map((lv) => {
     const isUnlocked = unlocked.has(lv.id);
     const rec = done[lv.id];
     const optional = lv.optional || [];
     const earned = rec?.optional?.length || 0;
     return `
-      <button class="level-card ${isUnlocked ? '' : 'locked'} ${rec ? 'done' : ''}" data-level="${lv.id}" ${isUnlocked ? '' : 'disabled aria-disabled="true"'}>
-        <span class="lv-no">${escapeHtml(lv.num)}</span>
-        <span class="lv-name">${escapeHtml(lv.name)}</span>
-        <span class="lv-obj">${escapeHtml(lv.town ? 'Persistent town: order board, story, daily goals' : lv.objective.text)}</span>
-        <span class="lv-foot">
-          <span class="tag ${rec ? 'done' : 'new'}">${rec ? 'Completed' : isUnlocked ? 'Ready' : 'Locked'}</span>
-          ${optional.length ? `<span class="tag">${earned}/${optional.length} extras</span>` : ''}
-        </span>
-        ${isUnlocked ? '' : `<span class="lock">${icon('lock')} ${lv.town ? 'Finish Level 3 to open Town mode' : 'Finish the previous level'}</span>`}
+      <button class="campaign-card ${isUnlocked ? '' : 'locked'} ${rec ? 'done' : ''}" data-level="${lv.id}" ${isUnlocked ? '' : 'disabled aria-disabled="true"'}>
+        <span class="campaign-card-top"><span class="campaign-index">${escapeHtml(lv.num === 'T' ? 'START' : `0${lv.num}`)}</span><span class="campaign-state ${rec ? 'complete' : ''}">${rec ? `${icon('check')} COMPLETE` : isUnlocked ? 'READY TO PLAY' : `${icon('lock')} LOCKED`}</span></span>
+        <span class="campaign-title">${escapeHtml(lv.name)}</span>
+        <span class="campaign-objective">${escapeHtml(lv.objective.text)}</span>
+        <span class="campaign-card-bottom"><span>${lv.num === 'T' ? 'GUIDED INTRODUCTION' : `CHAPTER ${escapeHtml(lv.num)}`}</span>${optional.length ? `<b>${earned}/${optional.length} MASTERY MARKS</b>` : '<b>STORY MISSION</b>'}</span>
       </button>`;
-  }).join('');
+  }).join('')}</div>
+    </section>`).join('');
+  const townUnlocked = unlocked.has('town');
+  const townLevel = Math.max(1, Math.floor(Number(doc.profile.townLevel) || 1));
+  const sagaChapter = Math.max(0, Math.floor(Number(doc.profile.story?.chapter) || 0));
   const screen = shell(`
     ${masthead(doc)}
-    <div class="screen-head">
-      <div>
-        <h1>Workshop trail</h1>
-        <p>Four compact maps. Each one adds one idea, then asks you to route it yourself.</p>
-      </div>
-      <div class="spacer"></div>
-      <button class="btn btn-quiet" data-act="back">${icon('home')} Main menu</button>
+    <div class="campaign-heading">
+      <div><div class="eyebrow">THE JOURNEY SO FAR</div><h1>Build your way into the story.</h1><p>Learn each craft, meet the neighbors, and bring what you discover back to town.</p></div>
+      <button class="btn btn-quiet campaign-back" data-act="back"><span class="campaign-back-arrow">${icon('arrow')}</span> Main menu</button>
     </div>
-    <section class="level-grid">${cards}</section>
+    <section class="town-destination ${townUnlocked ? 'is-open' : 'is-locked'}">
+      <div class="town-destination-mark">${icon('sparkle')}</div>
+      <div class="town-destination-copy"><div class="feature-kicker">${townUnlocked ? 'PERSISTENT TOWN · YOUR STORY CONTINUES' : 'THE ONGOING SAGA'}</div><h2>Mosslight Market</h2><p>${townUnlocked ? 'Your town is saved separately from campaign maps. Serve neighbors, expand the island, and discover new chapter goals.' : 'Complete “A Fresh Batch” to unlock your persistent town, meet its neighbors, and grow a saga beyond the campaign.'}</p></div>
+      <div class="town-destination-stats"><div><b>${townUnlocked ? `LV ${townLevel}` : '6 MAPS'}</b><span>${townUnlocked ? 'TOWN LEVEL' : 'STORY CAMPAIGN'}</span></div><div><b>${sagaChapter}</b><span>CHAPTERS CLEARED</span></div></div>
+      <button class="btn ${townUnlocked ? 'btn-primary' : ''} town-destination-action" data-level="town" ${townUnlocked ? '' : 'disabled aria-disabled="true"'}>${townUnlocked ? 'Open your town' : `${icon('lock')} Unlock after “A Fresh Batch”`}</button>
+    </section>
+    <div class="campaign-section-title"><div><div class="feature-kicker">THE HANDCRAFTED CAMPAIGN</div><h2>Six missions. One growing craft.</h2></div><span>INTRO + ${storyLevels.length - 1} MISSIONS</span></div>
+    <section class="campaign-chapters">${cards}</section>
   `);
   screen.addEventListener('click', (e) => {
     const back = e.target.closest('[data-act="back"]');

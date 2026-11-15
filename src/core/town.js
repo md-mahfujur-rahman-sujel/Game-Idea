@@ -36,7 +36,7 @@ export function ensureTown(profile) {
   if (!st.byType || typeof st.byType !== 'object') st.byType = {};
   if (!profile.story || typeof profile.story !== 'object') profile.story = { chapter: 0, step: 0 };
   if (!Number.isFinite(profile.story.chapter) || profile.story.chapter < 0) profile.story.chapter = 0;
-  profile.story.chapter = Math.min(MAX_SAFE_LEVEL, Math.floor(profile.story.chapter));
+  profile.story.chapter = Math.min(MAX_TOWN_LEVEL, Math.floor(profile.story.chapter));
   if (!Number.isFinite(profile.story.step) || profile.story.step < 0) profile.story.step = 0;
   const loop = profile.story.activeLoop;
   if (!loop || !Number.isSafeInteger(loop.chapter) || !Number.isSafeInteger(loop.startValue)

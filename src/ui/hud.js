@@ -726,15 +726,23 @@ export class HUD {
     t.querySelector('[data-el="chapter"]').textContent = `${levelNumberLabel(level)} · ${level.name}`;
     const objEl = t.querySelector('[data-el="objective"]');
     t.querySelector('[data-el="townbtn"]').style.display = level.town ? '' : 'none';
+    let objectiveLabel = '';
+    let compactObjective = '';
     if (level.town) {
       const st = storyStatus(ensureTown(ctrl.doc.profile));
+      objectiveLabel = st.done || st.locked ? st.text : `${st.title}: ${st.text} (${st.have}/${st.need})`;
+      compactObjective = st.done || st.locked ? 'Saga resting' : `${st.have}/${st.need} · ${st.title}`;
       objEl.innerHTML = st.done || st.locked
         ? escapeHtml(st.text)
         : `${escapeHtml(st.title)}: ${escapeHtml(st.text)} <span class="p">${st.have}/${st.need}</span>`;
     } else {
       const prog = primaryProgress(level, s);
+      objectiveLabel = `${level.objective.text} · ${prog.done}/${prog.total}${prog.extra ? ` · ${prog.extra}` : ''}`;
+      compactObjective = `${prog.done}/${prog.total} orders`;
       objEl.innerHTML = `${escapeHtml(level.objective.text)} <span class="p">${prog.done}/${prog.total}${prog.extra ? ' · ' + escapeHtml(prog.extra) : ''}</span>`;
     }
+    objEl.dataset.compact = compactObjective;
+    objEl.setAttribute('aria-label', objectiveLabel);
     t.querySelector('[data-el="coins"]').textContent = s.coins;
     t.querySelector('[data-el="rep"]').textContent = s.reputation;
     const profile = ensureTown(ctrl.doc?.profile);

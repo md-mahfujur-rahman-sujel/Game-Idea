@@ -149,6 +149,36 @@ class Controller {
   }
 
   async startLevel(id, opts = {}) {
+    const previousLevelSave = this.doc?.level;
+    const hadTownSave = !!this.doc?.profile && Object.hasOwn(this.doc.profile, 'townState');
+    const previousTownSave = this.doc?.profile?.townState;
+    try {
+      await this.startLevelImpl(id, opts);
+    } catch (err) {
+      // Keep unexpected setup errors from leaving a half-built HUD over an empty world.
+      // The save remains available so the player can retry after returning to the menu.
+      console.error(`Could not start level "${id}"`, err);
+      if (this.doc) {
+        this.doc.level = previousLevelSave;
+        if (this.doc.profile) {
+          if (hadTownSave) this.doc.profile.townState = previousTownSave;
+          else delete this.doc.profile.townState;
+        }
+      }
+      this.s = null;
+      this.level = null;
+      this.autoPaused = false;
+      this.showMainMenu();
+      openDialog({
+        title: 'The workshop could not open',
+        body: '<p>Your saved progress has been kept. Return to the menu and try opening the workshop again.</p>',
+        dismissible: false,
+        actions: [{ label: 'Back to menu', kind: 'primary', autofocus: true }],
+      });
+    }
+  }
+
+  async startLevelImpl(id, opts = {}) {
     if (this.level?.town && this.s && this.doc?.profile) {
       this.doc.profile.townState = this.serializeState();
     }
@@ -196,6 +226,13 @@ class Controller {
     try {
       await this.ensureGame();
     } catch (err) {
+      if (this.doc) {
+        this.doc.level = previousLevelSave;
+        if (this.doc.profile) {
+          if (hadTownSave) this.doc.profile.townState = previousTownSave;
+          else delete this.doc.profile.townState;
+        }
+      }
       this.hud?.destroy();
       this.hud = null;
       this.s = null;
@@ -281,6 +318,7 @@ class Controller {
     this.teardownLevel();
     this.ui().querySelectorAll('[data-layer="screen"]').forEach(el => el.remove());
     renderLevelSelect(this.ui(), this.menuCtx());
+    document.title = 'Little Batch Works — Story Campaign';
   }
 
   teardownLevel() {
@@ -662,18 +700,17 @@ class Controller {
     this.saveSoon();
   }
 
-  // Saves from before Town mode existed: finishing Level 3 should have unlocked it.
+  // Repair campaign progression on older saves without bypassing the final mission.
   repairTownUnlock() {
     const p = this.doc?.profile;
     if (!p?.completed || !Array.isArray(p.unlocked)) return;
     const unlock = id => { if (!p.unlocked.includes(id)) p.unlocked.push(id); };
-    if (p.completed.level3) {
-      unlock('level4');
-      unlock('town');
-    }
+    if (p.completed.level3) unlock('level4');
     if (p.completed.level4) unlock('level5');
     if (p.completed.level5) unlock('level6');
-    if (p.completed.level6) unlock('town');
+    // Preserve access for saves that already contain a town, even if their
+    // older progression record predates the Town unlock entry.
+    if (p.completed.level6 || p.townState || this.doc.level?.levelId === 'town') unlock('town');
   }
 
   onLevelComplete() {

@@ -1,8 +1,8 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.8 (supersedes v4.7 and all earlier drafts)
-**Date:** 2026-11-15
+**Version:** 4.9 (supersedes v4.8 and all earlier drafts)
+**Date:** 2026-11-16
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
@@ -13,6 +13,12 @@
 |---|---|
 | 1 | Made the landmark visually evolve through repeatable saga chapters, using bounded chapter-driven topping and color variations after its five structural upgrades. |
 | 2 | Reconciled later Town Level milestones with implemented unlocks: removed unbuilt cosmetics, worker assignment, belt upgrades, and extra district promises; documented milestone coin gifts instead. |
+
+### Changes from v4.8
+
+| # | Change |
+|---|---|
+| 1 | Recentered the main screen on the ongoing Town saga, and regrouped the authored tutorial and six missions into a chapter-based campaign map. Added compact objective wording and a high-contrast evergreen HUD treatment for small landscape displays. |
 
 ### Changes from v4.6
 
@@ -645,7 +651,9 @@ level = {
 
 ### Main screen
 
-Continue / New Game, level selection with chapter progress, settings, credits, and a concise save-status line.
+The home screen leads with Continue / Begin Story, a featured Mosslight Market destination, clear local-save status, and concise routes to the campaign, settings, controls, and credits. Town mode is the primary long-term destination; while it is locked, the screen names the mission that unlocks it. The campaign map separates the persistent Town saga from the tutorial and six authored missions, grouping missions by story chapter and showing unlock, completion, and mastery progress without presenting them as the full game progression.
+
+Use the shared warm-paper and evergreen visual system, large readable type, restrained shadows, and touch-safe controls. Keep the compact game HUD legible over the 3D world: the evergreen status bar uses a shortened objective at phone landscape widths, while build, orders, and inspection stay in mutually exclusive sheets.
 
 ### In-game layout
 
@@ -1055,7 +1063,7 @@ The MVP is acceptable for public release (web, Windows, and Android) when:
 
 ## 20. Appendix: decision log
 
-This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separated Town state, tightened routing, and aligned save cadence; version 4.4 added forgiving Town delivery bonuses and weekly goals; v4.5 added routing devices and the bakery line; v4.6 added accessibility updates, native shells, and save mirrors; v4.7 added Rush Hour; v4.8 continued landmark visual progression and reconciled later Town milestones.
+This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separated Town state, tightened routing, and aligned save cadence; version 4.4 added forgiving Town delivery bonuses and weekly goals; v4.5 added routing devices and the bakery line; v4.6 added accessibility updates, native shells, and save mirrors; v4.7 added Rush Hour; v4.8 continued landmark visual progression and reconciled later Town milestones; v4.9 made the Town saga the primary menu destination and grouped authored missions into a chapter campaign.
 
 | # | Conflict | Decision | Why |
 |---|---|---|---|
@@ -1113,5 +1121,6 @@ This document merges earlier drafts. Where they conflicted, the call below is au
 | 52 | Keyboard play could not place or select world objects | **Make the canvas focusable with an arrow-key grid cursor, Enter, R, and Escape controls** | Keeps the world buildable without a pointer while preserving visible focus |
 | 53 | Town needed an optional activity spike without adding failure pressure | **Add a 90-second Rush Hour with shorter intervals, an extra quick-delivery tier, and a five-minute cooldown; pause both clocks and never expire orders** | Gives players a voluntary throughput challenge and a small reward while retaining the no-fail Town promise |
 | 54 | The later unlock table promised content the game did not ship, and landmark visuals stopped after five chapters | **Use repeatable chapter-driven landmark colors and toppings; limit additional expansion to authored districts and later milestones to the existing coin-gift loop** | Keeps the ongoing saga lively while ensuring every visible progression promise maps to a real feature |
+| 55 | The home screen and flat level list made the finite campaign look like the whole game | **Feature the ongoing Mosslight Market saga on the home screen; present the tutorial and six missions as a chapter-organized campaign alongside the persistent Town destination** | Makes the long-term tycoon loop clear from first launch while keeping the authored story available as onboarding and progression |
 
 **Superseded documents:** Frostline Factory v0.1, Little Batch Works v1.0, PRD 2.0, `prd-merged.md`, v3.1, v3.2, and the v3.3 state of this file. Retain for history; do not edit as sources of truth.
