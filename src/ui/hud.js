@@ -430,7 +430,8 @@ export class HUD {
         </div>`;
       }
       if (!active.length) {
-        html += `<div class="empty-note">No customers right now.<br>The next order arrives in about 16 seconds, and up to 3 wait at a time.</div>`;
+        const wait = Math.ceil(Math.max(0, s.orders.spawnTimer) / 10);
+        html += `<div class="empty-note">No customers right now.<br>${wait ? `The next order arrives in about ${wait} seconds` : 'The next order is arriving'}; up to ${s.boardSlots || 3} can wait at a time.</div>`;
       }
       for (const o of active) {
         const frac = Math.max(0, Math.min(1, o.remaining / (o.patienceMax * 10)));

@@ -148,6 +148,9 @@ class Controller {
   }
 
   async startLevel(id, opts = {}) {
+    if (this.level?.town && this.s && this.doc?.profile) {
+      this.doc.profile.townState = this.serializeState();
+    }
     let level = LEVEL_BY_ID[id];
     if (level && level.town && this.doc) level = this.townLevelFor();
     if (!level) return;
@@ -155,9 +158,17 @@ class Controller {
     // rather than dereferencing a document that does not exist yet.
     if (!this.doc) return;
     this.level = level;
-    const resume = opts.resume !== false && this.doc.level?.levelId === id;
     let state = null;
-    if (resume) state = sanitizeState(this.doc.level.state, level);
+    let resume = opts.resume !== false && this.doc.level?.levelId === id;
+    if (level.town && opts.resume !== false) {
+      state = this.doc.profile.townState
+        ? sanitizeState(this.doc.profile.townState, level)
+        : null;
+      if (!state && this.doc.level?.levelId === id) state = sanitizeState(this.doc.level.state, level);
+      resume = !!state;
+    } else if (resume) {
+      state = sanitizeState(this.doc.level.state, level);
+    }
     if (!state) state = createLevelState(level);
     state.paused = false;
     state.levelDone = !!state.trackers.completed;
@@ -442,7 +453,7 @@ class Controller {
     }
 
     this.saveClock += d;
-    if (this.saveClock >= 6000) {
+    if (this.saveClock >= 10000) {
       this.saveClock = 0;
       this.saveNow();
     }
@@ -707,7 +718,7 @@ class Controller {
       if (!o) return { ok: false, reason: 'That object is gone' };
       return validatePlacement(this.s, this.level, this.buildType, tile.x, tile.y, { free: true, ignore: o });
     }
-    return validatePlacement(this.s, this.level, this.buildType, tile.x, tile.y);
+    return validatePlacement(this.s, this.level, this.buildType, tile.x, tile.y, { dir: this.buildRot });
   }
 
   linkPreview(tile) {
@@ -1368,7 +1379,9 @@ class Controller {
     this.doc.profile.settings = { ...this.settings };
     if (this.level?.town) this.doc.profile.lastSeenAt = Date.now();
     if (this.s && this.level) {
-      this.doc.level = { levelId: this.level.id, state: this.serializeState() };
+      const state = this.serializeState();
+      this.doc.level = { levelId: this.level.id, state };
+      if (this.level.town) this.doc.profile.townState = state;
     }
     this.doc.updatedAt = Date.now();
     this.saving = true;
@@ -1479,8 +1492,12 @@ class Controller {
         this.audio.ctx.resume();
       }
     });
-    window.addEventListener('pagehide', () => this.saveNow());
-    window.addEventListener('beforeunload', () => this.saveNow());
+    const exit = () => {
+      this.saveNow();
+      this.audio.stopMusic();
+    };
+    window.addEventListener('pagehide', exit);
+    window.addEventListener('beforeunload', exit);
     window.addEventListener('resize', () => {
       if (this.hud?.anySheetOpen() && window.innerHeight > 540) this.hud.closeSheet();
     });

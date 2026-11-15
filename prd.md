@@ -1,11 +1,19 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.2 (supersedes v4.1 and all earlier drafts)
+**Version:** 4.3 (supersedes v4.2 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.2
+
+| # | Change |
+|---|---|
+| 1 | Save Town's workshop state independently from the currently selected story level, with a v1-to-v2 migration that preserves a saved Town session. |
+| 2 | Enforce the no-merger rule in belt placement and transfer, and require source and machine outputs to eject only onto belts facing away from their port. |
+| 3 | Use authored and generated order gaps as the actual spawn cadence, and align the autosave heartbeat with the 10-second requirement. |
 
 ### Changes from v4.1
 
@@ -214,6 +222,7 @@ Target session length 5–20 minutes. No requirement to stay online or keep the 
 - Belts connect only when direction and machine ports are compatible. The placement ghost previews the connection: a lit arrow at the outgoing edge, a lit socket at the receiving port, and an explicit mismatch reason otherwise.
 - **No direct port-to-port transfer.** Every transfer from a source or machine output to another machine or counter input needs at least one belt tile between the ports. Two adjacent ports never connect on their own; the placement ghost shows the missing link.
 - An item advances only when the next segment or machine input socket has room. A blocked item stays visible on its segment; the segment shows a blocked icon.
+- A belt tile accepts at most one inbound belt. A second inbound line is rejected with a clear reason; merging requires a splitter, which is not part of the launch build.
 - Machines accept only the item types declared for each input socket and hold limited buffers (default: 2 per input socket, 2 output). A wrong-type item is never accepted and the socket reports "wrong item type".
 - **Any item on a belt can be removed:** select the item, choose Remove, and confirm. The item is discarded with no refund and the segment frees immediately. This is the guaranteed remedy for wrong-type items and spoiled goods; no belt can be permanently deadlocked.
 - The inspection UI names the origin of a blockage ("Freezer output full", "Washer needs peaches") and highlights the affected belt path.
@@ -310,6 +319,7 @@ This is the game's single differentiator. It ships as the **last cuttable P1 fea
 - Customers arrive in small groups at the service counter and queue with distinct silhouettes.
 - Each order contains 1–2 products from the counter's accepted list, a coin reward, a reputation value, and a patience window.
 - Orders come from a small, authored pool per level (no procedural shopping behavior). A level's objective may require 3–8 fulfilled orders.
+- Each pool entry's `gap` is the delay in seconds before that order appears after its predecessor. Town board orders use their generated gap in the same way.
 - **Delivery is automatic on intake.** The counter has a single input socket and a chilled 2-item buffer. When an item enters the buffer and matches the oldest active order, it is consumed immediately; a two-item order consumes its second matching item the same way, then pays the reward once.
 - An item that matches no active order stays in the buffer, and the counter shows "no order needs this" and blocks further intake. The player can discard a buffered item from the counter's inspect panel with confirmation, freeing the slot.
 - Orders consume only their listed products. A non-matching item is never consumed and never pays.
@@ -450,7 +460,7 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 
 #### Save schema v2
 
-Adds `townLevel`, `xp`, `unlocked` (machine, recipe, and cosmetic IDs), `districts` and `plots`, `storyChapter` and `storyStep`, `board` (slots with seeds), `daily` (goals, claimed, streak, lastPlayedDay), `permits`, `lastSeenAt`, and `collectionBook`. Migration v1 to v2 maps completed levels to Chapter 1 and starts Town Level 1. All new IDs validate against content tables as in §6.10.
+Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily goals, permits and return-time data. Migration v1 to v2 copies the current Town state into the separate Town slot when a v1 save was inside Town mode; other v1 saves remain intact and receive an empty Town slot. Every loaded layout is sanitized against its level data.
 
 #### Requirements
 
@@ -974,7 +984,7 @@ The MVP is acceptable for public release (web, Windows, and Android) when:
 
 ## 20. Appendix: decision log
 
-This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49).
+This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separates Town state, tightens routing, and aligns save cadence.
 
 | # | Conflict | Decision | Why |
 |---|---|---|---|

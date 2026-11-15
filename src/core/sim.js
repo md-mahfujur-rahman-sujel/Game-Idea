@@ -3,7 +3,7 @@ import { ITEMS, familyAccepts, orderDisplayName } from '../data/items.js';
 import {
   DIR_VEC, opp, tileOnEdge, edgeTiles, EDGE_DIR,
 } from './iso.js';
-import { socketEdge, machineTiming, beltAt, objectAt } from './state.js';
+import { socketEdge, machineTiming, beltAt, beltInputCount, objectAt } from './state.js';
 import { evaluatePrimary, evaluateOptional } from './objectives.js';
 import { townTemplate } from './town.js';
 
@@ -116,12 +116,11 @@ function tickOrders(s, level, fx) {
       createdAt: s.trackers.elapsedTicks,
       errand: false,
     });
-    if (level.town) {
-      s.orders.spawnTimer = 120;
-    } else {
-      const next = level.orderPool[s.orders.queueIndex % level.orderPool.length];
-      s.orders.spawnTimer = Math.max(16, next.gap) * 10;
-    }
+    const next = level.town
+      ? townTemplate(s)
+      : level.orderPool[s.orders.queueIndex % level.orderPool.length];
+    const gapSeconds = Number.isFinite(next?.gap) ? Math.max(0, next.gap) : 12;
+    s.orders.spawnTimer = gapSeconds * 10;
     if (fx) fx.sfx('customer');
   }
 }
@@ -307,6 +306,7 @@ function tryTransfer(s, level, b, it, fx) {
   if (targetBelt) {
     if (targetBelt.item) return block(b, 'Belt ahead is full');
     if (targetBelt.dir === opp(b.dir)) return block(b, 'Belts face each other');
+    if (beltInputCount(s, nx, ny) > 1) return block(b, 'Two belt lines merge here without a splitter');
     targetBelt.item = { ...it, progress: 0, blocked: false, blockedReason: '' };
     b.item = null;
     return;
@@ -376,7 +376,7 @@ function runSources(s, fx) {
       const tx = o.x + lane.tile[0] + dx;
       const ty = o.y + lane.tile[1] + dy;
       const belt = beltAt(s, tx, ty);
-      if (belt && !belt.item) {
+      if (belt && belt.dir !== opp(dir) && !belt.item) {
         const item = lane.buf.shift();
         belt.item = {
           type: item.type, progress: 0, fresh: null, melt: null, refreezeCount: item.refreezeCount || 0,
@@ -497,7 +497,7 @@ function ejectOutputs(s) {
     const dir = o.rot;
     for (const [tx, ty] of edgeTiles(o, dir)) {
       const b = beltAt(s, tx, ty);
-      if (!b || b.item) continue;
+      if (!b || b.dir === opp(dir) || b.item) continue;
       const item = o.output.shift();
       b.item = {
         type: item.type,

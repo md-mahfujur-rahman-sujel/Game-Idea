@@ -67,7 +67,7 @@ prd.md                canonical product requirements (v3.7)
 
 ## Save data
 
-Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. A previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
+Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. The active level and Town workshop layout are saved separately so leaving Town mode does not erase its layout. A v1-to-v2 migration preserves Town saves, a previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
 
 ## Internal reference material
 

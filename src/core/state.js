@@ -117,6 +117,20 @@ export function beltAt(s, x, y) {
   return s.belts[tileKey(x, y)] || null;
 }
 
+// Count only belt inputs that can physically enter this tile. A belt that faces
+// directly back at its feeder is already a blocked connection, not a junction.
+export function beltInputCount(s, x, y, targetDir = beltAt(s, x, y)?.dir) {
+  let count = 0;
+  for (let dir = 0; dir < 4; dir++) {
+    const [dx, dy] = DIR_VEC[dir];
+    const feeder = beltAt(s, x - dx, y - dy);
+    if (feeder?.dir !== dir) continue;
+    if (targetDir != null && targetDir === opp(dir)) continue;
+    count++;
+  }
+  return count;
+}
+
 // Whether the tile ahead can receive from this belt. This mirrors the topology
 // checks in tryTransfer without needing an item in hand, so the scene can mark a
 // route that points at nothing before something jams on it.
@@ -125,7 +139,7 @@ export function beltHasReceiver(s, belt) {
   const nx = belt.x + dx;
   const ny = belt.y + dy;
   const next = beltAt(s, nx, ny);
-  if (next) return next.dir !== opp(belt.dir);
+  if (next) return next.dir !== opp(belt.dir) && beltInputCount(s, nx, ny) <= 1;
   const target = objectAt(s, nx, ny);
   if (!target) return false;
   const edge = opp(belt.dir);
@@ -188,6 +202,17 @@ export function validatePlacement(s, level, type, x, y, opts = {}) {
       };
     }
   }
+  if (type === 'belt') {
+    const dir = ((opts.dir | 0) % 4 + 4) % 4;
+    if (beltInputCount(s, x, y, dir) > 1) {
+      return { ok: false, reason: 'Two belt lines would merge here. A belt can only have one input.', code: 'junction' };
+    }
+    const [dx, dy] = DIR_VEC[dir];
+    const next = beltAt(s, x + dx, y + dy);
+    if (next && next.dir !== opp(dir) && beltInputCount(s, next.x, next.y) > 0) {
+      return { ok: false, reason: 'This belt would merge into another line. A belt can only have one input.', code: 'junction' };
+    }
+  }
   return { ok: true };
 }
 
@@ -214,18 +239,15 @@ export function placeObject(s, level, type, x, y, rot = 0, opts = {}) {
 }
 
 export function placeBelt(s, level, x, y, dir = 0, opts = {}) {
-  if (!isBuildable(level, x, y)) return { ok: false, reason: 'Outside the buildable area' };
-  if (occupiedBy(s, x, y)) {
-    const occ = occupiedBy(s, x, y);
-    return { ok: false, reason: `Blocked by ${occ.type ? BUILDINGS[occ.type].name : 'Belt'}` };
-  }
+  const normalizedDir = ((dir | 0) % 4 + 4) % 4;
+  const check = validatePlacement(s, level, 'belt', x, y, { ...opts, dir: normalizedDir });
+  if (!check.ok) return check;
   const cost = BUILDINGS.belt.cost;
-  if (!opts.free && s.coins < cost) return { ok: false, reason: `Not enough coins (need ${cost})` };
   if (!opts.free) {
     s.coins -= cost;
     s.counters.beltsPlaced++;
   }
-  s.belts[tileKey(x, y)] = { x, y, dir: dir % 4, item: null, preplaced: !!opts.preplaced };
+  s.belts[tileKey(x, y)] = { x, y, dir: normalizedDir, item: null, preplaced: !!opts.preplaced };
   s.dirty = true;
   return { ok: true };
 }
