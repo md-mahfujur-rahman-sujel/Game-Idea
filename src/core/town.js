@@ -1,10 +1,16 @@
-// Town progression (PRD 6.8a): XP and Town Level, unlock tree, order board, land expansion,
-// story chapters, daily goals with a non-punishing streak, and the capped overnight batch.
+// Town progression: uncapped Town Levels, unlock tree, order board, land expansion,
+// authored and generated saga chapters, daily goals, and the capped overnight batch.
 // Everything is stored on the profile so the save schema stays valid, and nothing here
 // touches the deterministic simulation except `townTemplate`, which is a pure function of the
 // state it is given.
 
-export const MAX_TOWN_LEVEL = 50;
+const MAX_SAFE_LEVEL = Number.MAX_SAFE_INTEGER;
+const SAGA_GOALS = {
+  fulfilled: { unit: 'orders' },
+  baseOrders: { unit: 'puree orders' },
+  teaOrders: { unit: 'teas' },
+  tubOrders: { unit: 'ice creams' },
+};
 
 // ---------------------------------------------------------------- XP and level
 
@@ -15,7 +21,7 @@ export function xpToNext(level) {
 export function ensureTown(profile) {
   if (!profile) return profile;
   if (!Number.isFinite(profile.townLevel) || profile.townLevel < 1) profile.townLevel = 1;
-  profile.townLevel = Math.min(MAX_TOWN_LEVEL, Math.floor(profile.townLevel));
+  profile.townLevel = Math.min(MAX_SAFE_LEVEL, Math.floor(profile.townLevel));
   if (!Number.isFinite(profile.xp) || profile.xp < 0) profile.xp = 0;
   if (!Number.isFinite(profile.permits) || profile.permits < 0) profile.permits = 0;
   if (!Number.isFinite(profile.expansion) || profile.expansion < 0) profile.expansion = 0;
@@ -28,7 +34,13 @@ export function ensureTown(profile) {
   if (!st.byType || typeof st.byType !== 'object') st.byType = {};
   if (!profile.story || typeof profile.story !== 'object') profile.story = { chapter: 0, step: 0 };
   if (!Number.isFinite(profile.story.chapter) || profile.story.chapter < 0) profile.story.chapter = 0;
+  profile.story.chapter = Math.min(MAX_SAFE_LEVEL, Math.floor(profile.story.chapter));
   if (!Number.isFinite(profile.story.step) || profile.story.step < 0) profile.story.step = 0;
+  const loop = profile.story.activeLoop;
+  if (!loop || !Number.isSafeInteger(loop.chapter) || !Number.isSafeInteger(loop.startValue)
+    || loop.startValue < 0 || !Object.hasOwn(SAGA_GOALS, loop.stat)) {
+    profile.story.activeLoop = null;
+  }
   if (!Number.isFinite(profile.landmark) || profile.landmark < 0) profile.landmark = 0;
   if (!Array.isArray(profile.recent)) profile.recent = [];
   return profile;
@@ -43,13 +55,11 @@ export function orderXp(order) {
 export function addXp(profile, amount) {
   ensureTown(profile);
   const from = profile.townLevel;
-  if (from >= MAX_TOWN_LEVEL) return { levelsGained: 0, level: from, unlocked: [], permits: 0 };
-  profile.xp += Math.max(0, Math.round(amount));
-  while (profile.townLevel < MAX_TOWN_LEVEL && profile.xp >= xpToNext(profile.townLevel)) {
+  profile.xp += Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
+  while (profile.townLevel < MAX_SAFE_LEVEL && profile.xp >= xpToNext(profile.townLevel)) {
     profile.xp -= xpToNext(profile.townLevel);
     profile.townLevel++;
   }
-  if (profile.townLevel >= MAX_TOWN_LEVEL) profile.xp = 0;
   const unlocked = [];
   let permits = 0;
   for (let lv = from + 1; lv <= profile.townLevel; lv++) {
@@ -247,9 +257,54 @@ export function recordOrder(profile, order) {
 
 export function currentChapter(profile) {
   ensureTown(profile);
-  const ch = STORY[profile.story.chapter];
-  if (!ch) return null;
-  return ch;
+  if (profile.story.chapter < STORY.length) return STORY[profile.story.chapter];
+  const chapter = profile.story.chapter;
+  let loop = profile.story.activeLoop;
+  if (!loop || loop.chapter !== chapter) {
+    const episode = chapter - STORY.length + 1;
+    const unlockedGoals = ['fulfilled'];
+    if (profile.townLevel >= 2) unlockedGoals.push('baseOrders');
+    if (profile.townLevel >= 3) unlockedGoals.push('teaOrders');
+    if (profile.townLevel >= 8) unlockedGoals.push('tubOrders');
+    const stat = unlockedGoals[(episode - 1) % unlockedGoals.length];
+    loop = {
+      chapter,
+      stat,
+      startValue: statValue(profile, stat),
+    };
+    profile.story.activeLoop = loop;
+  }
+  return sagaChapter(chapter - STORY.length + 1, loop.stat, loop.startValue);
+}
+
+const SAGA_NEIGHBOURS = [
+  { who: 'Mo the Mole', title: 'A Wider Welcome', intro: 'Mo studies the growing market. "There is room for everyone if we keep the ovens busy."' },
+  { who: 'Sprig the Squirrel', title: 'Branches of Trade', intro: 'Sprig arrives with a fresh map. "Our little routes are reaching farther every week."' },
+  { who: 'Pip the Rabbit', title: 'More Cups to Fill', intro: 'Pip waves from the square. "The neighbours brought friends. Let us make them feel at home."' },
+  { who: 'Nori the Otter', title: 'A Cooler Welcome', intro: 'Nori checks the cold room. "The town is growing. Let us keep every order fresh."' },
+  { who: 'The whole town', title: 'A Town Tradition', intro: 'Neighbours gather at the landmark to celebrate another season of good food.' },
+];
+
+function sagaChapter(episode, stat, startValue) {
+  const neighbour = SAGA_NEIGHBOURS[(episode - 1) % SAGA_NEIGHBOURS.length];
+  const pace = Math.floor(Math.sqrt(episode));
+  const goals = [6 + pace, 14 + pace * 2, 26 + pace * 3];
+  const rewardScale = Math.min(8, 1 + Math.floor(Math.sqrt(episode) / 2));
+  const unit = SAGA_GOALS[stat].unit;
+  return {
+    id: `saga-${episode}`,
+    title: `${neighbour.title} · Saga ${episode}`,
+    who: neighbour.who,
+    minLevel: 1,
+    intro: neighbour.intro,
+    steps: goals.map((n, i) => ({
+      text: `Serve ${startValue + n} ${unit} in total`,
+      stat,
+      n: startValue + n,
+      coins: (70 + i * 35) * rewardScale,
+      xp: (50 + i * 30) * rewardScale,
+    })),
+  };
 }
 
 // What the HUD shows: the chapter, the current step and how far along it is.
@@ -283,9 +338,12 @@ export function advanceStory(profile) {
     if (profile.story.step >= ch.steps.length) {
       profile.story.chapter++;
       profile.story.step = 0;
+      profile.story.activeLoop = null;
       profile.landmark++;
-      profile.permits++;
-      events.push({ kind: 'chapter', chapter: ch, permits: 1 });
+      const permits = profile.expansion < EXPANSIONS.length - 1 ? 1 : 0;
+      const coins = permits ? 0 : 150;
+      profile.permits += permits;
+      events.push({ kind: 'chapter', chapter: ch, permits, coins });
     }
   }
   return events;

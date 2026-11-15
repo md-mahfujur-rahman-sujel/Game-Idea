@@ -1,6 +1,8 @@
 # Little Batch Works
 
-A cozy 3D voxel conveyor-routing game. Build a wide food workshop, route the belts, and serve the market. This repository contains the **web build** (Vite + Three.js, vanilla JavaScript).
+A cozy 3D voxel conveyor-routing tycoon. Build a food workshop, route the belts, serve the market, and grow a town through an ongoing saga. This repository contains the **web build** (Vite + Three.js, vanilla JavaScript).
+
+After the authored campaign, Town mode keeps the workshop and town progress. Town Levels continue without a gameplay cap, and after the authored story chapters, repeatable saga chapters generate fresh order goals with rewards. Story progress and the active saga chapter are stored in the existing local save.
 
 ## Run it
 

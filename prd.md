@@ -1,11 +1,19 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.1 (supersedes v4.0 and all earlier drafts)
-**Date:** 2026-11-09
+**Version:** 4.2 (supersedes v4.1 and all earlier drafts)
+**Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.1
+
+| # | Change |
+|---|---|
+| 1 | Made Town Levels uncapped in normal play, retaining a safe integer boundary for save integrity. |
+| 2 | Added repeatable generated saga chapters after the authored story, with saved progress anchors and escalating order goals. |
+| 3 | Capped repeatable level-up coin gifts so long-term progression does not inflate rewards without bound. |
 
 ### Changes from v4.0
 
@@ -379,13 +387,13 @@ All four levels now pass by construction. The M2/M3 balance pass may move belt c
 | Session | 2 to 5 min | Fill 1 to 3 board orders, tune a bottleneck, collect rewards | Rewards pop immediately; the next unlock is always visible |
 | Daily | 10 to 15 min | Complete 3 daily goals, claim a daily gift | Streak counter that pauses, never resets, on a missed day |
 | Chapter | 1 to 3 hours | Finish a townsfolk story chapter, restore a landmark stage | New character, new recipe line, new district |
-| Long term | Weeks | Reach Town Level 50, expand all districts, 100% the recipe book | Collection book, landmark stages, cosmetic themes |
+| Long term | Ongoing | Continue Town Levels and saga chapters, expand all available districts, complete the recipe book | Landmark stages, recurring character arcs, long-term mastery |
 
 #### XP and Town Level
 
 - XP sources: order served (base 10 to 40 by size), first time making a recipe (bonus), objective badge, daily goal, chapter step.
-- Town Level 1 to 50. XP needed for the next level follows `40 + 25 × level` up to level 20, then `540 + 60 × (level − 20)`. Early levels arrive in minutes, later ones in a few sessions.
-- Level-up always grants a visible unlock or a reward chest (coins, a permit, or a cosmetic). A level-up with nothing new is not allowed.
+- Town Levels continue without a normal-play cap. XP needed for the next level follows `40 + 25 × level` up to level 20, then `540 + 60 × (level − 20)`. Level-up coin gifts stop growing after their configured reward cap.
+- Major unlocks are concentrated in early levels. Later levels sustain the loop with level-up rewards and saga chapter progress.
 
 #### Unlock tree (launch of Town mode)
 
@@ -420,8 +428,8 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 
 #### Story chapters
 
-- Eight original townsfolk (animals, consistent with the cosmetic workers), each with a short arc. A chapter is 5 to 8 steps, each a concrete objective such as "serve 4 teas" or "freeze a tub without melting".
-- Each chapter ends by restoring a stage of the central landmark and unlocking a character, recipe line, or district.
+- The authored launch story introduces original townsfolk, then repeatable saga chapters continue with rotating character prompts and generated order goals. Each chapter has concrete, increasingly demanding objectives.
+- Each chapter ends by restoring a stage of the central landmark. It awards an Expansion Permit while land remains locked, then coins after every authored district is open. Available land remains bounded by the authored town map.
 - Dialogue is short, skippable, and fully localisable. No text is shown over the world that the player cannot dismiss.
 
 #### Daily goals and streak

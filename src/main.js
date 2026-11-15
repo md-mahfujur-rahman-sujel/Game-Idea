@@ -476,7 +476,7 @@ class Controller {
     if (!profile) return;
     const res = addXp(profile, amount);
     if (res.levelsGained > 0) {
-      const gift = res.level * 5;
+      const gift = Math.min(250, res.level * 5);
       if (this.s) {
         this.s.coins += gift;
         this.s.townLevel = res.level;
@@ -532,7 +532,9 @@ class Controller {
       } else if (ev.kind === 'chapter') {
         this.audio.cue('unlock');
         this.scene?.setLandmarkStage(profile.landmark);
-        toast(`Chapter complete: ${ev.chapter.title}`, 'The landmark grows a stage. +1 Expansion Permit.', 'good');
+        const reward = ev.permits ? '+1 Expansion Permit.' : `+${ev.coins} coins.`;
+        if (ev.coins && this.s) this.s.coins += ev.coins;
+        toast(`Chapter complete: ${ev.chapter.title}`, `The landmark grows a stage. ${reward}`, 'good');
         this.saveSoon();
       }
     }

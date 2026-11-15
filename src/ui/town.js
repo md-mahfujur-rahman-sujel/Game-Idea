@@ -1,6 +1,6 @@
 import { openDialog, escapeHtml } from './dom.js';
 import {
-  ensureTown, xpToNext, MAX_TOWN_LEVEL, storyStatus, dailyProgress, ensureDaily,
+  ensureTown, xpToNext, storyStatus, dailyProgress, ensureDaily,
   nextExpansion, canExpand, EXPANSIONS, UNLOCK_NOTES,
 } from '../core/town.js';
 
@@ -19,11 +19,10 @@ function render(ctrl) {
   const s = ctrl.s;
   const lv = profile.townLevel;
   const need = xpToNext(lv);
-  const maxed = lv >= MAX_TOWN_LEVEL;
 
   let html = section('Town Level', `
-    <div style="font-weight:700;font-size:18px">Level ${lv}${maxed ? ' · max' : ''}</div>
-    ${maxed ? '' : `${bar(profile.xp, need)}<div class="ctx-sub">${profile.xp} / ${need} xp to Level ${lv + 1}</div>`}
+    <div style="font-weight:700;font-size:18px">Level ${lv}</div>
+    ${bar(profile.xp, need)}<div class="ctx-sub">${profile.xp} / ${need} xp to Level ${lv + 1}</div>
     <div class="ctx-sub">Landmark stage ${profile.landmark} · ${profile.permits} Expansion Permit${profile.permits === 1 ? '' : 's'}</div>`);
 
   const st = storyStatus(profile);
@@ -65,6 +64,8 @@ function render(ctrl) {
   const upcoming = Object.keys(UNLOCK_NOTES).map(Number).filter(n => n > lv).sort((a, b) => a - b).slice(0, 3);
   if (upcoming.length) {
     html += section('Coming up', upcoming.map(n => `<div class="ctx-sub"><b>Level ${n}:</b> ${escapeHtml(UNLOCK_NOTES[n].join(' · '))}</div>`).join(''));
+  } else {
+    html += section('The Saga Continues', `<div class="ctx-sub">Town Levels and story chapters keep going. New saga goals arrive as you serve more orders.</div>`);
   }
   return html;
 }

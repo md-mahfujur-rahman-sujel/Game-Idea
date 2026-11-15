@@ -4,7 +4,7 @@ import { DIR_NAME, DIR_ARROW } from '../core/iso.js';
 import { socketEdge, refundFor, supplierFor } from '../core/state.js';
 import { primaryProgress } from '../core/objectives.js';
 import { findOrderFor } from '../core/sim.js';
-import { ensureTown, xpToNext, MAX_TOWN_LEVEL, storyStatus, isBuildingUnlocked, buildingUnlockLevel } from '../core/town.js';
+import { ensureTown, xpToNext, storyStatus, isBuildingUnlocked, buildingUnlockLevel } from '../core/town.js';
 import { itemIcon, buildingIcon, brandMark } from './icons.js';
 import { icon, escapeHtml, setSaveStatus } from './dom.js';
 import { showComplete as renderCompleteBanner, levelNumberLabel } from './menu.js';
@@ -730,9 +730,8 @@ export class HUD {
     if (profile) {
       t.querySelector('[data-el="town"]').textContent = profile.townLevel;
       const need = xpToNext(profile.townLevel);
-      const maxed = profile.townLevel >= MAX_TOWN_LEVEL;
-      t.querySelector('[data-el="xp"]').textContent = maxed ? 'max' : `${profile.xp}/${need} xp`;
-      t.querySelector('[data-el="townchip"]').title = maxed ? 'Town Level maxed' : `Town Level ${profile.townLevel}: ${need - profile.xp} xp to the next level`;
+      t.querySelector('[data-el="xp"]').textContent = `${profile.xp}/${need} xp`;
+      t.querySelector('[data-el="townchip"]').title = `Town Level ${profile.townLevel}: ${need - profile.xp} xp to the next level`;
     }
 
     const pauseBtn = t.querySelector('[data-act="pause"]');
