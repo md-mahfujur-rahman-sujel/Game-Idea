@@ -77,6 +77,9 @@ export class WorkshopScene3D {
     this.workerMeshes = [];
     this.customerMeshes = [];
     this.windGroups = [];
+    this.forestCanopyEntries = [];
+    this.forestMoving = false;
+    this.forestDummy = new THREE.Object3D();
 
     this.world = new THREE.Scene();
     // A slightly deeper pastel blue leaves room for the warmer machinery without
@@ -533,18 +536,99 @@ export class WorkshopScene3D {
     const rnd = () => (seed = (seed * 16807) % 2147483647) / 2147483647;
     const cx = gridW / 2;
     const cz = gridH / 2;
-    let placed = 0;
-    for (let tries = 0; tries < 900 && placed < 80; tries++) {
+    const trees = [];
+    for (let tries = 0; tries < 900 && trees.length < 80; tries++) {
       const a = rnd() * Math.PI * 2;
       const r = 12 + rnd() * (this.islandRadius - 14);
       const x = cx + Math.cos(a) * r;
       const z = cz + Math.sin(a) * r * 0.95;
       if (x > -3 && x < gridW + 3 && z > -3 && z < gridH + 3) continue;
       if (Math.hypot(x - cx, z - cz) > this.islandRadius - 6) continue;
-      const tree = this.addVoxelTree(this.groundRoot, x, z, 0.9 + rnd() * 0.8, rnd() > 0.75);
-      tree.position.y = this.terrainHeight(x, z) - 0.22;
-      placed++;
+      trees.push({
+        x, z, base: this.terrainHeight(x, z) - 0.22,
+        scale: 0.9 + rnd() * 0.8,
+        fruit: rnd() > 0.75,
+        phase: (x * 12.9898 + z * 78.233) % (Math.PI * 2),
+      });
     }
+    this.addForestBatches(trees);
+  }
+
+  addForestBatches(trees) {
+    if (!trees.length) return;
+    const make = (geometry, capacity) => {
+      const mesh = new THREE.InstancedMesh(geometry, this.mat(0xffffff), capacity);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = false;
+      this.groundRoot.add(mesh);
+      return { mesh, used: 0 };
+    };
+    const trunks = make(trunkGeo, trees.length);
+    const canopy = make(blobGeo, trees.length * 4);
+    this.forestCanopyMesh = canopy.mesh;
+    canopy.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const fruits = make(sphereGeo, trees.length * 3);
+    const dummy = this.forestDummy;
+    const color = new THREE.Color();
+    const add = (batch, x, y, z, sx, sy, sz, tint) => {
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(0, 0, 0);
+      dummy.scale.set(sx, sy, sz);
+      dummy.updateMatrix();
+      batch.mesh.setMatrixAt(batch.used, dummy.matrix);
+      batch.mesh.setColorAt(batch.used, color.setHex(tint));
+      return batch.used++;
+    };
+    const foliage = [
+      [0, 1.55, 0, 1.3, 0x4f8a10],
+      [-0.38, 1.95, -0.12, 0.95, 0x5a9a12],
+      [0.36, 1.9, 0.2, 0.92, 0x7ba243],
+      [0.02, 2.3, 0, 0.8, 0x9ed12a],
+    ];
+    const fruitParts = [[-0.5, 1.7, 0.4, 0xc98e7e], [0.55, 1.75, -0.2, 0x9e4b4f], [0.15, 2.0, 0.6, 0xc6cb72]];
+    for (const tree of trees) {
+      add(trunks, tree.x, tree.base + 0.65 * tree.scale, tree.z, 0.3 * tree.scale, 1.3 * tree.scale, 0.3 * tree.scale, COLORS.wood);
+      for (const [x, y, z, size, tint] of foliage) {
+        const index = add(canopy, tree.x + x * tree.scale, tree.base + y * tree.scale, tree.z + z * tree.scale, size * tree.scale, size * tree.scale, size * tree.scale, tint);
+        this.forestCanopyEntries.push({
+          index, x: tree.x, z: tree.z, base: tree.base, scale: tree.scale,
+          phase: tree.phase, localX: x, localY: y, localZ: z, size,
+        });
+      }
+      if (tree.fruit) {
+        for (const [x, y, z, tint] of fruitParts) {
+          add(fruits, tree.x + x * tree.scale, tree.base + y * tree.scale, tree.z + z * tree.scale, 0.17 * tree.scale, 0.17 * tree.scale, 0.17 * tree.scale, tint);
+        }
+      }
+    }
+    for (const batch of [trunks, canopy, fruits]) {
+      batch.mesh.count = batch.used;
+      batch.mesh.instanceMatrix.needsUpdate = true;
+      if (batch.mesh.instanceColor) batch.mesh.instanceColor.needsUpdate = true;
+    }
+  }
+
+  animateForest(wind) {
+    const mesh = this.forestCanopyMesh;
+    if (!mesh || !this.forestCanopyEntries.length) return;
+    const dummy = this.forestDummy;
+    const t = wind ? this.time : 0;
+    for (const entry of this.forestCanopyEntries) {
+      const height = entry.localY * entry.scale;
+      const sway = wind ? Math.sin(t * 1.15 + entry.phase) * 0.055 * height : 0;
+      const lean = wind ? Math.cos(t * 0.9 + entry.phase) * 0.035 * height : 0;
+      dummy.position.set(
+        entry.x + entry.localX * entry.scale + sway,
+        entry.base + height,
+        entry.z + entry.localZ * entry.scale + lean,
+      );
+      dummy.rotation.set(0, 0, wind ? sway * 0.18 : 0);
+      dummy.scale.setScalar(entry.size * entry.scale);
+      dummy.updateMatrix();
+      mesh.setMatrixAt(entry.index, dummy.matrix);
+    }
+    mesh.instanceMatrix.needsUpdate = true;
   }
 
   addIslandGroundLife() {
@@ -740,6 +824,9 @@ export class WorkshopScene3D {
 
     this.buildIsland();
     this.windGroups = [];
+    this.forestCanopyEntries = [];
+    this.forestCanopyMesh = null;
+    this.forestMoving = false;
     this.addIslandGroundLife();
     this.addRimThicket();
 
@@ -2168,6 +2255,11 @@ export class WorkshopScene3D {
         tree.rotation.z = sway;
         tree.rotation.x = Math.cos(this.time * 0.9 + tree.userData.windPhase) * 0.012;
       }
+      this.animateForest(true);
+      this.forestMoving = true;
+    } else if (this.forestMoving) {
+      this.animateForest(false);
+      this.forestMoving = false;
     }
     if (this.spin || this.tiltSpin) {
       this.rotateOrbit(this.spin * delta, this.tiltSpin * delta);
