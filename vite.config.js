@@ -10,5 +10,10 @@ export default defineConfig({
   server: {
     host: true,
     port: 5173,
+    // Native build outputs contain thousands of files and locked Electron DLLs.
+    // They are not web sources and must not enter Vite's development watcher.
+    watch: {
+      ignored: ['**/release/**', '**/android/**'],
+    },
   },
 });
