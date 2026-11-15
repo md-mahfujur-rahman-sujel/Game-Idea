@@ -66,6 +66,9 @@ export class WorkshopScene3D {
     this.minDistance = 6.5;
     this.materials = new Map();
     this.beltMeshes = new Map();
+    this.beltBatches = null;
+    this.beltPhase = 0;
+    this.beltDummy = new THREE.Object3D();
     this.machineMeshes = new Map();
     this.itemMeshes = new Map();
     this.ghostMaterial = null;
@@ -1093,36 +1096,74 @@ export class WorkshopScene3D {
   }
 
   addBelt(belt) {
-    const group = new THREE.Group();
-    const cx = belt.x + 0.5;
-    const cz = belt.y + 0.5;
     const alongX = belt.dir % 2 === 0;
-    this.cube(group, cx, 0.1, cz, alongX ? 0.9 : 0.42, 0.16, alongX ? 0.42 : 0.9, COLORS.blueDark);
-    this.cube(group, cx, 0.2, cz, alongX ? 0.82 : 0.34, 0.08, alongX ? 0.34 : 0.82, COLORS.blue);
     const slats = [];
-    for (let i = 0; i < 4; i++) {
-      const offset = -0.3 + i * 0.2;
-      const mesh = this.cube(group, cx + (alongX ? offset : 0), 0.255, cz + (alongX ? 0 : offset), alongX ? 0.05 : 0.34, 0.06, alongX ? 0.34 : 0.05, 0xddebf4);
-      slats.push({ mesh, offset });
+    for (let i = 0; i < 4; i++) slats.push({ index: -1, offset: -0.3 + i * 0.2 });
+    this.beltMeshes.set(tileKey(belt.x, belt.y), {
+      belt,
+      alongX,
+      travelSign: belt.dir === 0 || belt.dir === 1 ? 1 : -1,
+      slats,
+    });
+  }
+
+  buildBeltInstances() {
+    const count = this.beltMeshes.size;
+    this.beltBatches = null;
+    this.beltPhase = 0;
+    if (!count) return;
+    const make = (color, capacity) => {
+      const mesh = new THREE.InstancedMesh(unitGeo, this.mat(color), capacity);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      mesh.frustumCulled = false;
+      this.beltRoot.add(mesh);
+      return { mesh, used: 0 };
+    };
+    const base = make(COLORS.blueDark, count);
+    const top = make(COLORS.blue, count);
+    const slats = make(0xddebf4, count * 4);
+    slats.mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    const rails = make(COLORS.brass, count * 2);
+    const arrows = make(COLORS.terra, count * 2);
+    const warnings = make(COLORS.terraDark, count);
+    const dummy = this.beltDummy;
+    const add = (batch, x, y, z, sx, sy, sz, rotation = 0) => {
+      dummy.position.set(x, y, z);
+      dummy.rotation.set(0, rotation, 0);
+      dummy.scale.set(sx, sy, sz);
+      dummy.updateMatrix();
+      batch.mesh.setMatrixAt(batch.used, dummy.matrix);
+      return batch.used++;
+    };
+    for (const entry of this.beltMeshes.values()) {
+      const { belt, alongX, slats: slatList } = entry;
+      const cx = belt.x + 0.5;
+      const cz = belt.y + 0.5;
+      const width = alongX ? 0.9 : 0.42;
+      const length = alongX ? 0.42 : 0.9;
+      add(base, cx, 0.1, cz, width, 0.16, length);
+      add(top, cx, 0.2, cz, alongX ? 0.82 : 0.34, 0.08, alongX ? 0.34 : 0.82);
+      for (const slat of slatList) {
+        const travel = slat.offset;
+        const index = add(slats, cx + (alongX ? travel : 0), 0.255, cz + (alongX ? 0 : travel), alongX ? 0.05 : 0.34, 0.06, alongX ? 0.34 : 0.05);
+        slat.index = index;
+      }
+      for (const side of [-1, 1]) {
+        add(rails, cx + (alongX ? 0 : side * 0.18), 0.25, cz + (alongX ? side * 0.18 : 0), alongX ? 0.9 : 0.05, 0.09, alongX ? 0.05 : 0.9);
+      }
+      const [dx, dz] = DIRS[belt.dir];
+      add(arrows, cx - dx * 0.06, 0.33, cz - dz * 0.06, alongX ? 0.3 : 0.07, 0.05, alongX ? 0.07 : 0.3);
+      add(arrows, cx + dx * 0.17, 0.33, cz + dz * 0.17, 0.15, 0.05, 0.15, Math.PI / 4);
+      if (this.s && !beltHasReceiver(this.s, belt)) {
+        add(warnings, cx + dx * 0.43, 0.4, cz + dz * 0.43, 0.085, 0.085, 0.085, Math.PI / 4);
+      }
     }
-    for (const side of [-1, 1]) {
-      this.cube(group, cx + (alongX ? 0 : side * 0.18), 0.25, cz + (alongX ? side * 0.18 : 0), alongX ? 0.9 : 0.05, 0.09, alongX ? 0.05 : 0.9, COLORS.brass);
+    for (const batch of [base, top, slats, rails, arrows, warnings]) {
+      batch.mesh.count = batch.used;
+      batch.mesh.instanceMatrix.needsUpdate = true;
     }
-    // Direction marker: a terracotta shaft and diamond head pointing the way the belt moves.
-    const [dx, dz] = DIRS[belt.dir];
-    this.cube(group, cx - dx * 0.06, 0.33, cz - dz * 0.06, alongX ? 0.3 : 0.07, 0.05, alongX ? 0.07 : 0.3, COLORS.terra, { castShadow: false });
-    const head = this.cube(group, cx + dx * 0.17, 0.33, cz + dz * 0.17, 0.15, 0.05, 0.15, COLORS.terra, { castShadow: false });
-    head.rotation.y = Math.PI / 4;
-    if (this.s && !beltHasReceiver(this.s, belt)) {
-      const warning = this.cube(group, cx + dx * 0.43, 0.4, cz + dz * 0.43, 0.085, 0.085, 0.085, COLORS.terraDark, { castShadow: false });
-      warning.rotation.y = Math.PI / 4;
-    }
-    group.userData.belt = belt;
-    group.userData.slats = slats;
-    group.userData.alongX = alongX;
-    group.userData.travelSign = belt.dir === 0 || belt.dir === 1 ? 1 : -1;
-    this.beltRoot.add(group);
-    this.beltMeshes.set(tileKey(belt.x, belt.y), group);
+    this.beltBatches = { slats: slats.mesh };
   }
 
   addItemMesh(type) {
@@ -1381,10 +1422,12 @@ export class WorkshopScene3D {
     this.clearGroup(this.workerRoot);
     this.clearGroup(this.customerRoot);
     this.beltMeshes.clear();
+    this.beltBatches = null;
     this.machineMeshes.clear();
     this.clearItemMeshes();
     for (const object of this.s.objects) this.addBuildingModel(object);
     for (const belt of Object.values(this.s.belts)) this.addBelt(belt);
+    this.buildBeltInstances();
     this.rebuildWorkersAndCustomers();
     this.refreshBuffers();
     this.redrawSelection();
@@ -1612,18 +1655,24 @@ export class WorkshopScene3D {
 
   animateBelts() {
     const phase = this.settings.reducedMotion || this.s?.paused ? 0 : (this.time * 1.05) % 0.8;
-    for (const group of this.beltMeshes.values()) {
-      const { slats, alongX, travelSign, belt } = group.userData;
-      if (!slats) continue;
+    if (phase === this.beltPhase || !this.beltBatches) return;
+    this.beltPhase = phase;
+    const dummy = this.beltDummy;
+    for (const entry of this.beltMeshes.values()) {
+      const { slats, alongX, travelSign, belt } = entry;
       const center = (alongX ? belt.x : belt.y) + 0.5;
-      for (const { mesh, offset } of slats) {
+      for (const { index, offset } of slats) {
         let travel = offset + phase * travelSign;
         if (travel > 0.34) travel -= 0.8;
         else if (travel < -0.34) travel += 0.8;
-        if (alongX) mesh.position.x = center + travel;
-        else mesh.position.z = center + travel;
+        dummy.position.set(belt.x + 0.5 + (alongX ? travel : 0), 0.255, belt.y + 0.5 + (alongX ? 0 : travel));
+        dummy.rotation.set(0, 0, 0);
+        dummy.scale.set(alongX ? 0.05 : 0.34, 0.06, alongX ? 0.34 : 0.05);
+        dummy.updateMatrix();
+        this.beltBatches.slats.setMatrixAt(index, dummy.matrix);
       }
     }
+    this.beltBatches.slats.instanceMatrix.needsUpdate = true;
   }
 
   redrawSelection() {
