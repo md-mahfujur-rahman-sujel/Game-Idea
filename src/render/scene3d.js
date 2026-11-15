@@ -1047,10 +1047,11 @@ export class WorkshopScene3D {
     const alongX = belt.dir % 2 === 0;
     this.cube(group, cx, 0.1, cz, alongX ? 0.9 : 0.42, 0.16, alongX ? 0.42 : 0.9, COLORS.blueDark);
     this.cube(group, cx, 0.2, cz, alongX ? 0.82 : 0.34, 0.08, alongX ? 0.34 : 0.82, COLORS.blue);
-    const slats = 4;
-    for (let i = 0; i < slats; i++) {
-      const t = -0.3 + i * 0.2;
-      this.cube(group, cx + (alongX ? t : 0), 0.255, cz + (alongX ? 0 : t), alongX ? 0.05 : 0.34, 0.06, alongX ? 0.34 : 0.05, 0xddebf4);
+    const slats = [];
+    for (let i = 0; i < 4; i++) {
+      const offset = -0.3 + i * 0.2;
+      const mesh = this.cube(group, cx + (alongX ? offset : 0), 0.255, cz + (alongX ? 0 : offset), alongX ? 0.05 : 0.34, 0.06, alongX ? 0.34 : 0.05, 0xddebf4);
+      slats.push({ mesh, offset });
     }
     for (const side of [-1, 1]) {
       this.cube(group, cx + (alongX ? 0 : side * 0.18), 0.25, cz + (alongX ? side * 0.18 : 0), alongX ? 0.9 : 0.05, 0.09, alongX ? 0.05 : 0.9, COLORS.brass);
@@ -1065,6 +1066,9 @@ export class WorkshopScene3D {
       warning.rotation.y = Math.PI / 4;
     }
     group.userData.belt = belt;
+    group.userData.slats = slats;
+    group.userData.alongX = alongX;
+    group.userData.travelSign = belt.dir === 0 || belt.dir === 1 ? 1 : -1;
     this.beltRoot.add(group);
     this.beltMeshes.set(tileKey(belt.x, belt.y), group);
   }
@@ -1084,9 +1088,19 @@ export class WorkshopScene3D {
     };
     switch (item.form) {
       case 'fruit':
-        blob(0, 0.24, 0, 0.27, 0.26, 0.27, color);
+        if (type === 'apple') {
+          // The apple's twin shoulders and fuller base keep its silhouette distinct
+          // from the peach even when viewed small or without relying on its red tint.
+          blob(0, 0.23, 0, 0.24, 0.22, 0.25, color);
+          blob(-0.105, 0.32, 0, 0.15, 0.15, 0.2, color);
+          blob(0.105, 0.32, 0, 0.15, 0.15, 0.2, color);
+        } else {
+          blob(0, 0.24, 0, 0.27, 0.26, 0.27, color);
+          // A soft vertical dimple reads as the peach seam from the camera angle.
+          this.cube(group, 0, 0.25, 0.258, 0.024, 0.22, 0.018, detail);
+        }
         this.cube(group, 0.02, 0.49, 0, 0.045, 0.13, 0.045, detail);
-        blob(-0.09, 0.48, 0.02, 0.13, 0.055, 0.08, type === 'apple' ? 0x708549 : 0x8eaa4d, false);
+        blob(-0.09, 0.48, 0.02, 0.13, 0.055, 0.08, 0x708549, false);
         break;
       case 'leaf':
         blob(0, 0.24, 0, 0.17, 0.055, 0.3, color, false).rotation.y = -0.55;
@@ -1460,6 +1474,22 @@ export class WorkshopScene3D {
         this.world.remove(mesh);
         this.clearGroup(mesh);
         this.itemMeshes.delete(key);
+      }
+    }
+  }
+
+  animateBelts() {
+    const phase = this.settings.reducedMotion ? 0 : (this.time * 1.05) % 0.8;
+    for (const group of this.beltMeshes.values()) {
+      const { slats, alongX, travelSign, belt } = group.userData;
+      if (!slats) continue;
+      const center = (alongX ? belt.x : belt.y) + 0.5;
+      for (const { mesh, offset } of slats) {
+        let travel = offset + phase * travelSign;
+        if (travel > 0.34) travel -= 0.8;
+        else if (travel < -0.34) travel += 0.8;
+        if (alongX) mesh.position.x = center + travel;
+        else mesh.position.z = center + travel;
       }
     }
   }
@@ -1988,6 +2018,7 @@ export class WorkshopScene3D {
       if (Math.hypot(this.glide.x, this.glide.z) < 0.0004) this.glide = null;
     }
     if (this.s) {
+      this.animateBelts();
       this.syncItems();
       this.updateFx(delta);
       if (!this.settings.reducedMotion) {
