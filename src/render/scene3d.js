@@ -248,7 +248,7 @@ export class WorkshopScene3D {
 
   // Rebuilds only the centrepiece when the story advances, so each finished chapter shows.
   setLandmarkStage(stage) {
-    const next = Math.max(0, Math.min(5, Math.floor(stage || 0)));
+    const next = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(stage || 0)));
     this.landmarkStage = next;
     if (!this.landmarkGroup || !this.landmarkGroup.parent) return;
     const { parent, position } = this.landmarkGroup;
@@ -260,6 +260,9 @@ export class WorkshopScene3D {
   }
 
   addDessertLandmark(parent, x, z, stage = this.landmarkStage || 0) {
+    const chapter = Math.max(0, Math.min(Number.MAX_SAFE_INTEGER, Math.floor(stage || 0)));
+    const icingColors = [0xfff7e6, 0xf2c4cf, 0xccebe7, 0xffe08a, 0xb4d4ff, 0xd7c5ef];
+    const toppingColors = [0x9e4b4f, 0xc6cb72, 0xffb768, 0xb4d4ff, 0xd19bff, 0xf2c4cf];
     const g = new THREE.Group();
     g.position.set(x, 0, z);
     parent.add(g);
@@ -276,25 +279,27 @@ export class WorkshopScene3D {
     cylinder(0.88, 1.02, 0.32, 0.46, COLORS.brass);
     cylinder(0.8, 0.84, 0.78, 0.98, 0xd3a58c);
     cylinder(0.88, 0.78, 0.18, 1.42, COLORS.cream);
-    const frosting = new THREE.Mesh(sphereGeo, this.mat(0xfff7e6));
+    const frosting = new THREE.Mesh(sphereGeo, this.mat(icingColors[chapter % icingColors.length]));
     frosting.position.set(0, 1.54, 0);
     frosting.scale.set(0.8, 0.23, 0.8);
     frosting.castShadow = true;
     g.add(frosting);
-    for (const [dx, dz, tint] of [[-0.38, 0.22, 0x9e4b4f], [0.34, 0.28, 0x9e4b4f], [0.16, -0.42, 0xc6cb72]]) {
+    const fruitPositions = [[-0.38, 0.22], [0.34, 0.28], [0.16, -0.42]];
+    fruitPositions.forEach(([dx, dz], index) => {
+      const tint = toppingColors[(chapter + index * 2) % toppingColors.length];
       const fruit = new THREE.Mesh(sphereGeo, this.mat(tint));
       fruit.position.set(dx, 1.74, dz);
       fruit.scale.set(0.19, 0.17, 0.19);
       fruit.castShadow = true;
       g.add(fruit);
-    }
+    });
     cylinder(0.12, 0.2, 0.3, 1.88, 0x708549, 8);
     // One addition per finished story chapter, so the centrepiece visibly grows.
-    if (stage >= 1) {
+    if (chapter >= 1) {
       cylinder(0.62, 0.7, 0.3, 1.5, 0xf2c4cf, 20);
       cylinder(0.1, 0.16, 0.26, 1.86, 0x708549, 8).position.y = 2.1;
     }
-    if (stage >= 2) {
+    if (chapter >= 2) {
       for (let i = 0; i < 8; i++) {
         const a = (i / 8) * Math.PI * 2;
         const flag = new THREE.Mesh(sphereGeo, this.mat(i % 2 ? 0xf6b8c4 : 0xa8d8f0));
@@ -303,10 +308,10 @@ export class WorkshopScene3D {
         g.add(flag);
       }
     }
-    if (stage >= 3) {
+    if (chapter >= 3) {
       cylinder(1.5, 1.6, 0.14, 0.08, COLORS.cream, 28);
     }
-    if (stage >= 4) {
+    if (chapter >= 4) {
       for (const s of [-1, 1]) {
         const gem = new THREE.Mesh(sphereGeo, this.mat(0xffe08a));
         gem.position.set(s * 0.5, 1.66, 0.3);
@@ -314,11 +319,21 @@ export class WorkshopScene3D {
         g.add(gem);
       }
     }
-    if (stage >= 5) {
+    if (chapter >= 5) {
       const crown = new THREE.Mesh(sphereGeo, this.mat(0xffd35e));
       crown.position.set(0, 2.34, 0);
       crown.scale.set(0.3, 0.3, 0.3);
       g.add(crown);
+    }
+    if (chapter >= 5) {
+      const sprinkles = (chapter - 4) % 6 + 1;
+      for (let i = 0; i < sprinkles; i++) {
+        const a = (i / sprinkles) * Math.PI * 2 + chapter * 0.37;
+        const sprinkle = new THREE.Mesh(sphereGeo, this.mat(toppingColors[(chapter + i) % toppingColors.length]));
+        sprinkle.position.set(Math.cos(a) * 0.55, 1.92 + (i % 2) * 0.07, Math.sin(a) * 0.55);
+        sprinkle.scale.set(0.1, 0.12, 0.1);
+        g.add(sprinkle);
+      }
     }
     // The original cake sculpture anchors the workshop without blocking routes.
     g.scale.setScalar(1.4);

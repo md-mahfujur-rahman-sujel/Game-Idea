@@ -73,7 +73,7 @@ src/styles.css        design system and responsive layout
 tests/                Node unit tests for simulation, state, objectives, reports and saves
 scripts/              authored-content validator
 .github/workflows/    CI: test, validate and build
-prd.md                canonical product requirements (v4.7)
+prd.md                canonical product requirements (v4.8)
 ```
 
 ## Save data

@@ -212,7 +212,7 @@ class Controller {
 
     const scene = this.scene;
     scene.setSettings(this.settings);
-    scene.landmarkStage = level.town ? Math.min(5, ensureTown(this.doc.profile).landmark) : 0;
+    scene.landmarkStage = level.town ? ensureTown(this.doc.profile).landmark : 0;
     scene.setLevel(level);
     scene.setState(state);
     scene.setSelection(null);

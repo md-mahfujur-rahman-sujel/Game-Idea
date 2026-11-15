@@ -94,6 +94,7 @@ export const UNLOCK_NOTES = {
   18: ['Wheat Field and Flour Mill'],
   20: ['Bakery: fruit tart orders'],
   22: ['Second expansion', 'Order board grows to 5 slots', '1 Expansion Permit'],
+  25: ['Town Level milestone gift'],
   30: ['Order board grows to 6 slots', '1 Expansion Permit'],
   40: ['1 Expansion Permit'],
 };

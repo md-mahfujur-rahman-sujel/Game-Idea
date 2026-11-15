@@ -1,11 +1,18 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.7 (supersedes v4.6 and all earlier drafts)
+**Version:** 4.8 (supersedes v4.7 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.7
+
+| # | Change |
+|---|---|
+| 1 | Made the landmark visually evolve through repeatable saga chapters, using bounded chapter-driven topping and color variations after its five structural upgrades. |
+| 2 | Reconciled later Town Level milestones with implemented unlocks: removed unbuilt cosmetics, worker assignment, belt upgrades, and extra district promises; documented milestone coin gifts instead. |
 
 ### Changes from v4.6
 
@@ -444,8 +451,8 @@ All seven authored stages (tutorial and levels 1–6) pass by construction. The 
 |---|---|---|---|
 | Session | 2 to 5 min | Fill 1 to 3 board orders, tune a bottleneck, collect rewards | Rewards pop immediately; the next unlock is always visible |
 | Daily | 10 to 15 min | Complete 3 daily goals, claim a daily gift | Streak counter that pauses, never resets, on a missed day |
-| Chapter | 1 to 3 hours | Finish a townsfolk story chapter, restore a landmark stage | New character, new recipe line, new district |
-| Long term | Ongoing | Continue Town Levels and saga chapters, expand all available districts, complete the recipe book | Landmark stages, recurring character arcs, long-term mastery |
+| Chapter | 1 to 3 hours | Finish a townsfolk saga chapter and restore the landmark | Recurring character story, milestone rewards, a new landmark look |
+| Long term | Ongoing | Continue Town Levels and saga chapters, improve production lines, complete the recipe book, expand available districts | Landmark themes, recurring character arcs, and long-term mastery |
 
 #### XP and Town Level
 
@@ -463,13 +470,13 @@ All seven authored stages (tutorial and levels 1–6) pass by construction. The 
 | 8 | Freezer and cold chain; first land expansion |
 | 10 | Splitter; chapter 3 story |
 | 12 | Combo orders (two or three product lines in one order) |
-| 15 | Merger; worker role assignment |
+| 15 | Merger; 1 Expansion Permit |
 | 18 | Wheat Field and Flour Mill |
 | 20 | Bakery and Fruit Tart orders |
 | 22 | Second district; board grows to 5 slots |
-| 25 | Belt speed upgrade; cooling upgrade |
-| 30 | Market stall customization; board grows to 6 slots |
-| 35 onward | New saga chapters, cosmetic themes, landmark stages, and further district expansion |
+| 25 | Town Level milestone coin gift |
+| 30 | Board grows to 6 slots; 1 Expansion Permit |
+| 35 onward | Repeatable saga chapters and chapter-driven landmark color and topping themes; all authored districts are already available |
 
 Recipes and machines are data-driven. Each has `unlockLevel`; the build menu shows locked items with their requirement, never hides them.
 
@@ -1048,7 +1055,7 @@ The MVP is acceptable for public release (web, Windows, and Android) when:
 
 ## 20. Appendix: decision log
 
-This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separated Town state, tightened routing, and aligned save cadence; version 4.4 added forgiving Town delivery bonuses and weekly goals.
+This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separated Town state, tightened routing, and aligned save cadence; version 4.4 added forgiving Town delivery bonuses and weekly goals; v4.5 added routing devices and the bakery line; v4.6 added accessibility updates, native shells, and save mirrors; v4.7 added Rush Hour; v4.8 continued landmark visual progression and reconciled later Town milestones.
 
 | # | Conflict | Decision | Why |
 |---|---|---|---|
@@ -1105,5 +1112,6 @@ This document merges earlier drafts. Where they conflicted, the call below is au
 | 51 | Native shells needed save portability and offline-safe storage | **Use Electron per-user `userData` and Capacitor's app-private data mirror with the shared versioned JSON document** | Lets the same progress survive app restarts without adding accounts, cloud sync, or external permissions |
 | 52 | Keyboard play could not place or select world objects | **Make the canvas focusable with an arrow-key grid cursor, Enter, R, and Escape controls** | Keeps the world buildable without a pointer while preserving visible focus |
 | 53 | Town needed an optional activity spike without adding failure pressure | **Add a 90-second Rush Hour with shorter intervals, an extra quick-delivery tier, and a five-minute cooldown; pause both clocks and never expire orders** | Gives players a voluntary throughput challenge and a small reward while retaining the no-fail Town promise |
+| 54 | The later unlock table promised content the game did not ship, and landmark visuals stopped after five chapters | **Use repeatable chapter-driven landmark colors and toppings; limit additional expansion to authored districts and later milestones to the existing coin-gift loop** | Keeps the ongoing saga lively while ensuring every visible progression promise maps to a real feature |
 
 **Superseded documents:** Frostline Factory v0.1, Little Batch Works v1.0, PRD 2.0, `prd-merged.md`, v3.1, v3.2, and the v3.3 state of this file. Retain for history; do not edit as sources of truth.
