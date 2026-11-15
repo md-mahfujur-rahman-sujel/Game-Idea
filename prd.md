@@ -1,11 +1,18 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.3 (supersedes v4.2 and all earlier drafts)
+**Version:** 4.4 (supersedes v4.3 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.3
+
+| # | Change |
+|---|---|
+| 1 | Added optional weekly goals and fast-delivery bonus tiers to Town orders; orders remain open after every bonus window expires. |
+| 2 | Advanced save schema to v3 for weekly goal state and persisted order bonus data, preserving the v1-to-v2 Town-layout migration. |
 
 ### Changes from v4.2
 
@@ -430,6 +437,7 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - Orders never expire into failure. An unfilled slot can be swapped for a new one once per day per slot, at no cost.
 - Difficulty scales with Town Level: item count, product lines, and combo rules grow gradually. The generator guarantees every order is producible with the player's unlocked machines.
 - Existing patience-based customers remain in story levels. Board orders use no timer, which suits mobile sessions.
+- Town orders offer a fast-delivery bonus: +25% when served within 30 seconds or +10% within 90 seconds. These are bonus tiers only; an order never expires, loses its base reward, or causes a failure state.
 
 #### Land expansion
 
@@ -447,6 +455,11 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - 3 daily goals generated from unlocked content, plus a daily gift chest.
 - Streak counts consecutive days played. Missing a day pauses the streak and shows a gentle message; the streak is never reduced. Streak rewards are small and cosmetic or permits.
 
+#### Weekly goals
+
+- Two optional goals rotate at the start of each local Monday and count progress from that week's baseline.
+- Goals use only unlocked products, can be claimed individually, and reward coins and XP. Missing a goal never reduces Town Level, story progress, or another reward.
+
 #### Offline batch (P1)
 
 - On return, the town yields an "overnight batch" of coins and XP equal to 50% of the throughput measured in the last 10 active minutes, capped at 4 hours of production. It is computed arithmetically, not by running the simulation, so it is deterministic and cheap.
@@ -458,9 +471,9 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - Every unlock must be reachable by play alone; the M3 balance pass sets exact numbers.
 - Reputation (§6.7) still applies to the story levels only. In Town mode, XP and Town Level replace it for gating, so spending still cannot lock progression.
 
-#### Save schema v2
+#### Save schema v3
 
-Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily goals, permits and return-time data. Migration v1 to v2 copies the current Town state into the separate Town slot when a v1 save was inside Town mode; other v1 saves remain intact and receive an empty Town slot. Every loaded layout is sanitized against its level data.
+Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily and weekly goals, permits, return-time data, and active order bonus tiers. Migration v1 to v2 copies the current Town state into the separate Town slot when a v1 save was inside Town mode; v2 to v3 adds weekly goal and bonus-tier defaults. Every loaded layout is sanitized against its level data.
 
 #### Requirements
 
@@ -984,7 +997,7 @@ The MVP is acceptable for public release (web, Windows, and Android) when:
 
 ## 20. Appendix: decision log
 
-This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separates Town state, tightens routing, and aligns save cadence.
+This document merges earlier drafts. Where they conflicted, the call below is authoritative. Version 3.1 added Windows and Android distribution (#13–#18); version 3.2 resolved the consistency gaps found in review (#19–#26); version 3.3 resolved the blocking logic gaps (#27–#33); version 3.4 added the reference boundary, scene composition, and palette rules (#34–#35); version 3.5 moved to the 3D voxel world (#36); version 3.6 set the closest-original-match goal and smooth round-world camera direction (#37–#39); version 3.7 fixed camera centering and gesture thresholds, capped refreezing, added local save recovery, and specified the compact HUD (#40–#43); version 4.0 added Town mode, the motion and physics layer, and the continuous world (#44–#47); version 4.1 added the style direction and comparable titles (#48–#49); version 4.2 continued progression past the authored chapters; version 4.3 separated Town state, tightened routing, and aligned save cadence; version 4.4 added forgiving Town delivery bonuses and weekly goals.
 
 | # | Conflict | Decision | Why |
 |---|---|---|---|

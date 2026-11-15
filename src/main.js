@@ -14,7 +14,8 @@ import { DIR_VEC, opp, edgeTiles, tileOnEdge, EDGE_DIR } from './core/iso.js';
 import { SaveStore, freshDoc, DEFAULT_SETTINGS } from './core/save.js';
 import {
   addXp, orderXp, ensureTown, recordOrder, boardSlots, isBuildingUnlocked, buildingUnlockLevel,
-  SPEED_UPGRADE_LEVEL, EXPANSIONS, canExpand, advanceStory, ensureDaily, claimDaily, claimChest, overnightBatch,
+  SPEED_UPGRADE_LEVEL, EXPANSIONS, canExpand, advanceStory, ensureDaily, ensureWeekly,
+  claimDaily, claimChest, claimWeeklyGoal as claimWeeklyGoalState, overnightBatch,
 } from './core/town.js';
 import { openTownDialog } from './ui/town.js';
 import { AudioBus } from './core/audio.js';
@@ -514,6 +515,7 @@ class Controller {
     state.townLevel = profile.townLevel;
     state.boardSlots = boardSlots(profile.townLevel);
     ensureDaily(profile);
+    ensureWeekly(profile);
     if (resume) {
       const batch = overnightBatch(profile);
       if (batch) {
@@ -532,6 +534,7 @@ class Controller {
     if (!profile || !this.s) return;
     ensureTown(profile);
     if (ensureDaily(profile)) toast('New daily goals', 'Fresh goals are ready in the Town panel.', 'info');
+    if (ensureWeekly(profile)) toast('New weekly goals', 'A fresh set of optional goals is ready in the Town panel.', 'info');
     for (const ev of advanceStory(profile)) {
       if (ev.kind === 'intro') {
         toast(ev.chapter.title, ev.chapter.intro, 'info');
@@ -589,6 +592,18 @@ class Controller {
     this.s.coins += r.coins;
     this.audio.cue('unlock');
     toast('Daily gift', `+${r.coins} coins${r.permits ? ' · +1 Expansion Permit' : ''}`, 'good');
+    this.hud?.refresh();
+    this.saveSoon();
+  }
+
+  claimWeeklyGoal(index) {
+    const profile = this.doc?.profile;
+    const reward = profile && claimWeeklyGoalState(profile, index);
+    if (!reward || !this.s) return;
+    this.s.coins += reward.coins;
+    this.audio.cue('unlock');
+    toast('Weekly goal claimed', `+${reward.coins} coins · +${reward.xp} xp`, 'good');
+    this.grantXp(reward.xp);
     this.hud?.refresh();
     this.saveSoon();
   }

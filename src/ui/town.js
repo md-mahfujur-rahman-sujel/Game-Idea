@@ -1,7 +1,7 @@
 import { openDialog, escapeHtml } from './dom.js';
 import {
   ensureTown, xpToNext, storyStatus, dailyProgress, ensureDaily,
-  nextExpansion, canExpand, EXPANSIONS, UNLOCK_NOTES,
+  ensureWeekly, weeklyProgress, nextExpansion, canExpand, EXPANSIONS, UNLOCK_NOTES,
 } from '../core/town.js';
 
 function bar(have, need) {
@@ -16,6 +16,7 @@ function section(title, inner) {
 function render(ctrl) {
   const profile = ensureTown(ctrl.doc.profile);
   ensureDaily(profile);
+  ensureWeekly(profile);
   const s = ctrl.s;
   const lv = profile.townLevel;
   const need = xpToNext(lv);
@@ -46,7 +47,19 @@ function render(ctrl) {
   const allClaimed = d.goals.every(g => g.claimed);
   html += section(`Daily goals · streak ${d.streak} day${d.streak === 1 ? '' : 's'}`, `${goals}
     <div class="ctx-actions"><button class="btn btn-sm ${allClaimed && !d.chestClaimed ? 'btn-primary' : ''}" data-town="chest" ${allClaimed && !d.chestClaimed ? '' : 'disabled'}>${d.chestClaimed ? 'Daily gift claimed' : 'Open the daily gift'}</button></div>
-    <div class="ctx-sub">Missing a day only pauses the streak. Every third day the gift includes a permit.</div>`);
+    <div class="ctx-sub">Missing a day only pauses the streak. Every third-day gift adds a permit until all districts are open, then extra coins.</div>`);
+
+  const w = profile.weekly;
+  const weeklyGoals = w.goals.map((g, i) => {
+    const have = weeklyProgress(profile, g);
+    const ready = have >= g.target && !g.claimed;
+    return `<div class="item-row" style="align-items:center">
+      <span class="nm" style="flex:1">${escapeHtml(g.label)}<br><span class="ctx-sub">${have} / ${g.target}</span></span>
+      ${g.claimed ? '<span class="fresh chilled">claimed</span>'
+        : `<button class="btn btn-sm ${ready ? 'btn-primary' : ''}" data-town="weekly-claim" data-index="${i}" ${ready ? '' : 'disabled'}>Claim</button>`}
+    </div>`;
+  }).join('');
+  html += section('Weekly goals · resets Monday', `${weeklyGoals}<div class="ctx-sub">Optional rewards; unclaimed goals never reduce Town progress.</div>`);
 
   const cur = EXPANSIONS[profile.expansion];
   const next = nextExpansion(profile);
@@ -80,6 +93,7 @@ export function openTownDialog(ctrl) {
     const act = btn.dataset.town;
     if (act === 'claim') ctrl.claimDailyGoal(Number(btn.dataset.index));
     else if (act === 'chest') ctrl.claimDailyChest();
+    else if (act === 'weekly-claim') ctrl.claimWeeklyGoal(Number(btn.dataset.index));
     else if (act === 'expand') ctrl.expandTown();
     paint();
   });

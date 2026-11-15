@@ -1,7 +1,7 @@
 // One versioned save document with a previous-good slot and daily recovery copy.
 // IndexedDB is primary; localStorage is the fallback and keeps a separate daily copy.
 
-export const SAVE_VERSION = 2;
+export const SAVE_VERSION = 3;
 const DB_NAME = 'little-batch-works';
 const STORE = 'saves';
 const KEY = 'current';
@@ -200,14 +200,38 @@ export function validateDoc(doc) {
 // One entry per version bump: MIGRATIONS[n] upgrades a version-n document to n + 1.
 // Add the step here, then raise SAVE_VERSION. Older saves are upgraded in order on load,
 // so a bump never makes an existing save unreadable.
+function addOrderBonusDefaults(state) {
+  if (!state || typeof state !== 'object') return state;
+  return {
+    ...state,
+    orders: {
+      ...(state.orders || {}),
+      active: (state.orders?.active || []).map(order => ({
+        ...order,
+        bonusTiers: Array.isArray(order.bonusTiers) ? order.bonusTiers : [],
+      })),
+    },
+  };
+}
+
 const MIGRATIONS = {
   1: doc => ({
     ...doc,
     profile: {
       ...doc.profile,
       townState: doc.profile.townState
-        || (doc.level?.levelId === 'town' ? doc.level.state : null),
+        || (doc.level?.levelId === 'town' ? addOrderBonusDefaults(doc.level.state) : null),
     },
+    level: doc.level ? { ...doc.level, state: addOrderBonusDefaults(doc.level.state) } : null,
+  }),
+  2: doc => ({
+    ...doc,
+    profile: {
+      ...doc.profile,
+      townState: addOrderBonusDefaults(doc.profile.townState),
+      weekly: doc.profile.weekly || null,
+    },
+    level: doc.level ? { ...doc.level, state: addOrderBonusDefaults(doc.level.state) } : null,
   }),
 };
 
@@ -240,6 +264,7 @@ export function freshDoc() {
       completed: {},
       settings: { ...DEFAULT_SETTINGS },
       townState: null,
+      weekly: null,
       createdAt: Date.now(),
     },
     level: null,

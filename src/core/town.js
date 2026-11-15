@@ -151,7 +151,18 @@ export function townTemplate(s) {
   }
   reward = Math.round(reward * (1.15 + Math.min(level, 30) * 0.01));
   // Board orders never expire into failure, so patience is effectively unlimited.
-  return { id: `board-${index}`, items, reward, rep, patience: 99999, gap: 12 };
+  return {
+    id: `board-${index}`,
+    items,
+    reward,
+    rep,
+    patience: 99999,
+    gap: 12,
+    bonusTiers: [
+      { within: 30 * 10, reward: Math.max(1, Math.round(reward * 0.25)) },
+      { within: 90 * 10, reward: Math.max(1, Math.round(reward * 0.1)) },
+    ],
+  };
 }
 
 // ---------------------------------------------------------------- land expansion
@@ -364,6 +375,12 @@ export function dayKey(now = Date.now()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
+export function weekKey(now = Date.now()) {
+  const d = new Date(now);
+  d.setDate(d.getDate() - ((d.getDay() + 6) % 7));
+  return dayKey(d.getTime());
+}
+
 function dayNumber(key) {
   const [y, m, d] = key.split('-').map(Number);
   return Math.round(Date.UTC(y, m - 1, d) / 86400000);
@@ -397,25 +414,69 @@ export function ensureDaily(profile, now = Date.now()) {
   return true;
 }
 
+const WEEKLY_TYPES = [
+  { stat: 'fulfilled', min: 1, label: n => `Serve ${n} orders`, base: 14, per: 0.4 },
+  { stat: 'items', min: 1, label: n => `Deliver ${n} items`, base: 20, per: 0.6 },
+  { stat: 'baseOrders', min: 2, label: n => `Serve ${n} puree orders`, base: 7, per: 0.2 },
+  { stat: 'teaOrders', min: 3, label: n => `Serve ${n} teas`, base: 7, per: 0.2 },
+  { stat: 'tubOrders', min: 8, label: n => `Serve ${n} ice creams`, base: 4, per: 0.1 },
+];
+
+// Weekly goals count progress only from the start of the current local week.
+// Missing a goal never affects Town Level, story progress, or an existing save.
+export function ensureWeekly(profile, now = Date.now()) {
+  ensureTown(profile);
+  const current = weekKey(now);
+  if (profile.weekly?.week === current && Array.isArray(profile.weekly.goals)) return false;
+  const eligible = WEEKLY_TYPES.filter(t => t.min <= profile.townLevel);
+  const seed = Math.floor(dayNumber(current) / 7) + profile.townLevel * 31;
+  const rnd = lcg(seed);
+  const pool = [...eligible];
+  const goals = [];
+  while (goals.length < 2 && pool.length) {
+    const t = pool.splice(Math.floor(rnd() * pool.length), 1)[0];
+    const target = Math.max(1, Math.round(Math.min(30, t.base + t.per * profile.townLevel)));
+    goals.push({ stat: t.stat, target, label: t.label(target), base: statValue(profile, t.stat), claimed: false });
+  }
+  profile.weekly = { week: current, goals };
+  return true;
+}
+
+export function weeklyProgress(profile, goal) {
+  return Math.min(goal.target, Math.max(0, statValue(profile, goal.stat) - goal.base));
+}
+
+export function claimWeeklyGoal(profile, index) {
+  ensureTown(profile);
+  const goal = profile.weekly?.goals?.[index];
+  if (!goal || goal.claimed || weeklyProgress(profile, goal) < goal.target) return null;
+  goal.claimed = true;
+  return { coins: Math.min(500, 120 + profile.townLevel * 4), xp: 100 };
+}
+
 export function dailyProgress(profile, goal) {
   return Math.min(goal.target, Math.max(0, statValue(profile, goal.stat) - goal.base));
 }
 
 export function claimDaily(profile, index) {
+  ensureTown(profile);
   const d = profile.daily;
   const goal = d?.goals?.[index];
   if (!goal || goal.claimed || dailyProgress(profile, goal) < goal.target) return null;
   goal.claimed = true;
-  return { coins: 25 + profile.townLevel * 3, xp: 20 };
+  return { coins: Math.min(250, 25 + profile.townLevel * 3), xp: 20 };
 }
 
 export function claimChest(profile) {
+  ensureTown(profile);
   const d = profile.daily;
   if (!d || d.chestClaimed || !d.goals.every(g => g.claimed)) return null;
   d.chestClaimed = true;
-  const permit = d.streak % 3 === 0 ? 1 : 0;
+  const earnsPermit = d.streak % 3 === 0;
+  const permit = earnsPermit && profile.expansion < EXPANSIONS.length - 1 ? 1 : 0;
   profile.permits += permit;
-  return { coins: 50 + profile.townLevel * 5, permits: permit };
+  const coins = Math.min(500, 50 + profile.townLevel * 5) + (earnsPermit && !permit ? 100 : 0);
+  return { coins, permits: permit };
 }
 
 // ---------------------------------------------------------------- overnight batch

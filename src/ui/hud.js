@@ -444,12 +444,17 @@ export class HUD {
         const chips = remaining
           ? o.items.filter(it => it.need > 0).map(it => this.shortageChip(s, it.type)).join('')
           : '';
+        const bonus = (o.bonusTiers || []).map(tier => {
+          const left = Math.ceil((tier.within - Math.max(0, s.trackers.elapsedTicks - o.createdAt)) / 10);
+          return left > 0 ? `+${tier.reward} within ${left}s` : '';
+        }).filter(Boolean);
         html += `<div class="order ${urgent}">
           <div class="o-prod">${items}</div>
           <div class="o-main">
             <div class="o-reward">${icon('coin')}${o.reward} <span class="rep">+${o.rep} rep</span></div>
             <div class="order-progress"><span class="done">${doneCount}/${total} delivered</span>${remaining > 1 ? ` · ${remaining} to go` : ''}</div>
             ${chips ? `<div class="order-short">${chips}</div>` : ''}
+            ${bonus.length ? `<div class="ctx-sub">Fast delivery · ${bonus.join(' · ')}</div>` : o.bonusTiers?.length ? '<div class="ctx-sub">No rush bonus now · order stays open</div>' : ''}
           </div>
           ${o.patienceMax >= 9999 ? '' : patienceArc(frac, secs, frac < 0.25)}
         </div>`;

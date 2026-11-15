@@ -729,6 +729,10 @@ export function sanitizeState(raw, level) {
       .map(it => ({ type: it.type, qty: Math.max(1, it.qty | 0), need: Math.max(0, it.need | 0) })),
     reward: clampNum(o.reward, 0, 9999, 0),
     rep: clampNum(o.rep, 0, 99, 0),
+    bonusTiers: Array.isArray(o.bonusTiers) ? o.bonusTiers.slice(0, 2).map(tier => ({
+      within: clampNum(tier?.within, 0, 99999, 0),
+      reward: clampNum(tier?.reward, 0, 9999, 0),
+    })).sort((a, b) => a.within - b.within) : [],
     patienceMax: clampNum(o.patienceMax, 1, 99999, 120),
     remaining: clampNum(o.remaining, 0, 999999, 120),
     createdAt: clampNum(o.createdAt, 0, 1e9, 0),

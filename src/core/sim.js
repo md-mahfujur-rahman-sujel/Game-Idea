@@ -111,6 +111,7 @@ function tickOrders(s, level, fx) {
       items: tpl.items.map(it => ({ type: it.type, qty: it.qty, need: it.qty })),
       reward: tpl.reward,
       rep: tpl.rep,
+      bonusTiers: Array.isArray(tpl.bonusTiers) ? tpl.bonusTiers : [],
       patienceMax: tpl.patience,
       remaining: tpl.patience * 10,
       createdAt: s.trackers.elapsedTicks,
@@ -205,7 +206,10 @@ function matchCounterBuffer(s, level, counter, fx) {
 function fulfillOrder(s, level, order, fx) {
   const idx = s.orders.active.indexOf(order);
   if (idx >= 0) s.orders.active.splice(idx, 1);
-  s.coins += order.reward;
+  const elapsed = Math.max(0, s.trackers.elapsedTicks - (order.createdAt || 0));
+  const bonus = (order.bonusTiers || []).find(tier => elapsed <= tier.within)?.reward || 0;
+  const payout = order.reward + bonus;
+  s.coins += payout;
   s.reputation += order.rep;
   s.counters.fulfilled++;
   let allFruit = true;
@@ -228,8 +232,8 @@ function fulfillOrder(s, level, order, fx) {
   if (hasTub) s.counters.tubOrders++;
   if (fx) {
     fx.sfx('order');
-    if (fx.onOrder) fx.onOrder(order);
-    fx.toast('Order served', `+${order.reward} coins · +${order.rep} reputation.`, 'good');
+    if (fx.onOrder) fx.onOrder({ ...order, reward: payout });
+    fx.toast('Order served', `+${payout} coins${bonus ? ` · fast bonus +${bonus}` : ''} · +${order.rep} reputation.`, 'good');
     if (fx.onSave) fx.onSave();
   }
 }
