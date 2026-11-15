@@ -1404,6 +1404,7 @@ export class WorkshopScene3D {
     g.userData.phase = Math.random() * Math.PI * 2;
     g.userData.role = role;
     g.userData.stationId = stationId;
+    g.userData.station = stationId == null ? null : this.s?.objects.find(object => object.id === stationId) || null;
     const blob = (px, py, pz, sx, sy, sz, color, shadow = true) => {
       const m = new THREE.Mesh(sphereGeo, this.mat(color));
       m.position.set(px, py, pz);
@@ -2386,7 +2387,7 @@ export class WorkshopScene3D {
     for (const w of this.workerMeshes) {
       const p = w.userData.phase;
       const role = w.userData.role;
-      const station = w.userData.stationId == null ? null : this.s?.objects.find(o => o.id === w.userData.stationId);
+      const station = w.userData.station;
       const working = station?.state === 'working';
       const blocked = station?.state === 'blocked';
       const celebrating = t < (w.userData.celebrateUntil || 0);
