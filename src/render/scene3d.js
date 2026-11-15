@@ -66,6 +66,7 @@ export class WorkshopScene3D {
     this.minDistance = 6.5;
     this.materials = new Map();
     this.beltMeshes = new Map();
+    this.machineMeshes = new Map();
     this.itemMeshes = new Map();
     this.ghostMaterial = null;
     this.selectionMaterial = null;
@@ -1056,6 +1057,8 @@ export class WorkshopScene3D {
       marker.rotation.y = localDirection * Math.PI / 2;
     }
     if (def.kind === 'machine') {
+      g.userData.simObject = o;
+      this.machineMeshes.set(o.id, g);
       for (const edge of outputEdges(o)) {
         const p = this.portPosition(o, edge);
       this.cube(g, p.x, 0.66, p.z, 0.24, 0.24, 0.24, COLORS.brass);
@@ -1349,6 +1352,7 @@ export class WorkshopScene3D {
     this.clearGroup(this.workerRoot);
     this.clearGroup(this.customerRoot);
     this.beltMeshes.clear();
+    this.machineMeshes.clear();
     this.clearItemMeshes();
     for (const object of this.s.objects) this.addBuildingModel(object);
     for (const belt of Object.values(this.s.belts)) this.addBelt(belt);
@@ -1440,9 +1444,19 @@ export class WorkshopScene3D {
     if (s) {
       const tr = this.fxTrack;
       if (!tr || tr.s !== s) {
-        this.fxTrack = { s, ids: new Set(s.objects.map(o => o.id)), out: new Map(s.objects.map(o => [o.id, o.output?.length || 0])), fulfilled: s.counters.fulfilled };
-      } else if (!this.settings.reducedMotion) {
         const ids = new Set();
+        const out = new Map();
+        const states = new Map();
+        for (const o of s.objects) {
+          ids.add(o.id);
+          out.set(o.id, o.output?.length || 0);
+          states.set(o.id, o.state);
+        }
+        this.fxTrack = { s, ids, nextIds: new Set(), out, states, fulfilled: s.counters.fulfilled };
+      } else if (!this.settings.reducedMotion) {
+        const previousIds = tr.ids;
+        const ids = tr.nextIds;
+        ids.clear();
         for (const o of s.objects) {
           ids.add(o.id);
           const cx = o.x + o.w / 2;
@@ -1455,8 +1469,25 @@ export class WorkshopScene3D {
             this.burst(cx, 1.2, cz, { count: 7, colors: [0xffffff, 0xf2f8ff], spread: 0.35, up: 1.1, grav: -0.6, size: 0.2, life: 1.0 });
           }
           tr.out.set(o.id, now);
+
+          const previousState = tr.states.get(o.id);
+          if (previousIds.has(o.id) && previousState !== o.state) {
+            if (o.state === 'working') {
+              this.burst(cx, 1.45, cz, { count: 4, colors: [0xf4fbff, 0xccebe7], spread: 0.45, up: 1.5, grav: -0.4, size: 0.12, life: 0.65, jitter: 0.2 });
+            } else if (o.state === 'blocked') {
+              this.burst(cx, 0.9, cz, { count: 5, colors: [0xffcf84, 0xad4950], spread: 0.55, up: 2.2, grav: 7, size: 0.075, life: 0.5, jitter: 0.25 });
+            }
+          }
+          tr.states.set(o.id, o.state);
+        }
+        for (const id of previousIds) {
+          if (!ids.has(id)) {
+            tr.out.delete(id);
+            tr.states.delete(id);
+          }
         }
         tr.ids = ids;
+        tr.nextIds = previousIds;
         if (s.counters.fulfilled > tr.fulfilled) {
           const counter = s.objects.find(o => o.type === 'counter');
           if (counter) {
@@ -1532,7 +1563,9 @@ export class WorkshopScene3D {
       if (age >= 0 && age < 0.5 && !this.settings.reducedMotion) {
         const k = age / 0.5;
         const eb = 1 + 2.7 * Math.pow(k - 1, 3) + 1.7 * Math.pow(k - 1, 2);
-        mesh.scale.setScalar(0.3 + 0.7 * eb);
+        const pop = 0.3 + 0.7 * eb;
+        const squash = Math.exp(-Math.pow((k - 0.82) / 0.09, 2)) * 0.2;
+        mesh.scale.set(pop * (1 + squash * 0.55), pop * (1 - squash), pop * (1 + squash * 0.55));
         mesh.position.y += Math.sin(k * Math.PI) * 0.32 * (1 - k);
       } else if (mesh.scale.x !== 1) {
         mesh.scale.setScalar(1);
@@ -2094,6 +2127,7 @@ export class WorkshopScene3D {
     }
     if (this.s) {
       this.animateBelts();
+      this.animateMachines(delta);
       this.syncItems();
       this.updateFx(delta);
       if (!this.settings.reducedMotion) {
@@ -2107,6 +2141,16 @@ export class WorkshopScene3D {
     }
     this.keepCameraAboveGround();
     this.renderer.render(this.world, this.camera);
+  }
+
+  animateMachines(delta) {
+    const animate = !this.s?.paused && !this.settings.reducedMotion;
+    const blend = Math.min(1, delta / 90);
+    for (const mesh of this.machineMeshes.values()) {
+      const state = mesh.userData.simObject?.state;
+      const target = !animate ? 1 : state === 'blocked' ? 0.972 : state === 'working' ? 0.988 : 1;
+      mesh.scale.y += (target - mesh.scale.y) * blend;
+    }
   }
 
   updateDaylight(delta) {
