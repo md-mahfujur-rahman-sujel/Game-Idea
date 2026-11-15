@@ -147,11 +147,12 @@ The game takes visual direction from a cheerful, dense food-factory illustration
 ### Accessibility and comfort requirements
 
 - No information is conveyed by color alone: every critical state uses icon + text + shape.
-- UI text is at least 14 px at the minimum viewport; scale with browser zoom without clipping.
+- UI text uses rem units and scales with the browser's root font size and zoom without clipping.
 - Pause is always reachable, including during tutorials and cutscenes; pause halts production **and** patience timers.
-- Reduced-motion setting disables belt-item bobbing, screen shake, and idle animations.
+- Reduced-motion setting and the system preference disable belt-item bobbing, belt roll, screen shake, camera momentum, and idle animations.
 - Independent music and SFX volume, plus a single mute control.
 - No flashing above 3 Hz. Blockage and spoilage cues are informative, never alarm-like.
+- Keyboard-only world play is supported: focus the world canvas, move a visible grid cursor with arrow keys, place or select with Enter, rotate with R, and cancel with Escape. G returns focus to the world and B moves focus to the build menu. Focus order is visible, and menus remain operable with Tab and Enter.
 - Keyboard access covers menus, pause, pan/zoom, and build-mode exit; focus is always visible.
 - Touch targets are at least 44 × 44 px, and every gesture has a visible button equivalent (pan, zoom, cancel placement).
 - HTML overlay panels carry screen-reader labels; the canvas is never the sole carrier of required text.

@@ -41,6 +41,7 @@ class Controller {
     this.moveId = null;
     this.autoPaused = false;
     this.hoverTile = null;
+    this.keyboardCursor = null;
     this.stall = null;
     this.speed = 1;
     this.acc = 0;
@@ -217,6 +218,16 @@ class Controller {
     scene.setBuild(null);
     scene.setHints([]);
     scene.setPath([], '');
+    this.keyboardCursor = { x: Math.min(level.x0 + 2, level.x1), y: Math.min(level.y0 + 5, level.y1) };
+    scene.setKeyboardCursor(this.keyboardCursor, false);
+    const canvas = scene.renderer.domElement;
+    canvas.onfocus = () => {
+      if (!this.keyboardCursor) this.keyboardCursor = { x: level.x0, y: level.y0 };
+      this.hoverTile = this.keyboardCursor;
+      scene.setKeyboardCursor(this.keyboardCursor, true);
+      if (this.buildType) this.updateGhost(this.keyboardCursor);
+    };
+    canvas.onblur = () => scene.setKeyboardCursor(this.keyboardCursor, false);
     scene.refreshAll();
     this.hud.lastTutorialKey = '';
     this.hud.renderBuild();
@@ -373,9 +384,11 @@ class Controller {
   // -------------------------------------------------------------- settings
 
   applySettings(initial = false) {
-    document.body.classList.toggle('reduce-motion', !!this.settings.reducedMotion);
+    const prefersReducedMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches || false;
+    const reducedMotion = !!this.settings.reducedMotion || prefersReducedMotion;
+    document.body.classList.toggle('reduce-motion', reducedMotion);
     this.audio.applySettings(this.settings);
-    if (this.scene) this.scene.setSettings(this.settings);
+    if (this.scene) this.scene.setSettings({ ...this.settings, reducedMotion });
     if (!initial && this.hud) this.hud.refresh();
   }
 
@@ -1458,6 +1471,7 @@ class Controller {
         return;
       }
       if ((e.key === ' ' || e.key === 'Enter') && onButton) return;
+      const onWorld = e.target === this.scene?.renderer.domElement;
 
       switch (e.key) {
         case ' ':
@@ -1471,6 +1485,7 @@ class Controller {
           break;
         case 'r': case 'R':
           if (this.buildType) this.rotateBuild();
+          else if (onWorld && this.selection) this.rotateSelected();
           break;
         case 'b': case 'B':
           if (this.s) {
@@ -1483,10 +1498,30 @@ class Controller {
           this.speed = Number(e.key);
           this.hud?.refresh();
           break;
-        case 'ArrowUp': this.pan('up'); e.preventDefault(); break;
-        case 'ArrowDown': this.pan('down'); e.preventDefault(); break;
-        case 'ArrowLeft': this.pan('left'); e.preventDefault(); break;
-        case 'ArrowRight': this.pan('right'); e.preventDefault(); break;
+        case 'ArrowUp':
+          if (onWorld) this.moveKeyboardCursor(0, -1); else this.pan('up');
+          e.preventDefault(); break;
+        case 'ArrowDown':
+          if (onWorld) this.moveKeyboardCursor(0, 1); else this.pan('down');
+          e.preventDefault(); break;
+        case 'ArrowLeft':
+          if (onWorld) this.moveKeyboardCursor(-1, 0); else this.pan('left');
+          e.preventDefault(); break;
+        case 'ArrowRight':
+          if (onWorld) this.moveKeyboardCursor(1, 0); else this.pan('right');
+          e.preventDefault(); break;
+        case 'Enter':
+          if (onWorld && this.keyboardCursor) {
+            this.onClick(this.keyboardCursor);
+            e.preventDefault();
+          }
+          break;
+        case 'g': case 'G':
+          if (this.s) {
+            this.scene?.renderer.domElement.focus();
+            e.preventDefault();
+          }
+          break;
         case '+': case '=': this.zoom(1.15); e.preventDefault(); break;
         case '-': case '_': this.zoom(1 / 1.15); e.preventDefault(); break;
         case 'm': case 'M':
@@ -1510,6 +1545,19 @@ class Controller {
     });
   }
 
+  moveKeyboardCursor(dx, dy) {
+    if (!this.level || !this.scene) return;
+    const current = this.keyboardCursor || { x: this.level.x0, y: this.level.y0 };
+    const next = {
+      x: Math.max(this.level.x0, Math.min(this.level.x1, current.x + dx)),
+      y: Math.max(this.level.y0, Math.min(this.level.y1, current.y + dy)),
+    };
+    this.keyboardCursor = next;
+    this.hoverTile = next;
+    this.scene.setKeyboardCursor(next, true);
+    if (this.buildType) this.updateGhost(next);
+  }
+
   unlockAudio() {
     if (!this.doc) return;
     this.audio.unlock();
@@ -1518,6 +1566,7 @@ class Controller {
   }
 
   installLifecycle() {
+    window.matchMedia?.('(prefers-reduced-motion: reduce)').addEventListener?.('change', () => this.applySettings());
     document.addEventListener('visibilitychange', () => {
       if (document.hidden) {
         this.saveNow();

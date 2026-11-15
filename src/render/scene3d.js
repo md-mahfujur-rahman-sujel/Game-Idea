@@ -49,6 +49,8 @@ export class WorkshopScene3D {
     this.selection = null;
     this.build = null;
     this.hoverTile = null;
+    this.keyboardCursor = null;
+    this.keyboardCursorRoot = null;
     this.pathTiles = [];
     this.pathTone = '';
     this.hintTiles = [];
@@ -99,8 +101,10 @@ export class WorkshopScene3D {
     // ACES dims and greys saturated colours; Neutral keeps the pastels bright.
     this.renderer.toneMapping = THREE.NeutralToneMapping ?? THREE.LinearToneMapping;
     this.renderer.toneMappingExposure = 1.0;
-    this.renderer.domElement.setAttribute('role', 'img');
-    this.renderer.domElement.setAttribute('aria-label', 'Three-dimensional voxel workshop. Drag to orbit horizontally and vertically around the fixed island center; use the on-screen rotation slider for smooth horizontal rotation and its N button to face north. Right-drag or Shift-drag to pan; scroll to zoom toward the pointer; on touch, twist two fingers to rotate, slide vertically to tilt, pinch to zoom, and slide horizontally to pan.');
+    this.renderer.domElement.setAttribute('role', 'application');
+    this.renderer.domElement.setAttribute('aria-label', 'Little Batch Works world. Keyboard: use arrow keys to move the grid cursor, Enter to place or select, R to rotate, G to focus the world, and Escape to cancel. Pointer: drag to orbit around the island; right-drag or Shift-drag to pan; scroll to zoom.');
+    this.renderer.domElement.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight Enter R Escape');
+    this.renderer.domElement.tabIndex = 0;
     this.renderer.domElement.style.touchAction = 'none';
     this.renderer.domElement.style.display = 'block';
     document.getElementById('game').replaceChildren(this.renderer.domElement);
@@ -795,6 +799,10 @@ export class WorkshopScene3D {
 
   setLevel(level) {
     this.level = level;
+    this.renderer.domElement.tabIndex = 0;
+    this.renderer.domElement.setAttribute('role', 'application');
+    this.renderer.domElement.setAttribute('aria-label', 'Little Batch Works world. Keyboard: use arrow keys to move the grid cursor, Enter to place or select, R to rotate, G to focus the world, and Escape to cancel. Pointer: drag to orbit around the island; right-drag or Shift-drag to pan; scroll to zoom.');
+    this.renderer.domElement.setAttribute('aria-keyshortcuts', 'ArrowUp ArrowDown ArrowLeft ArrowRight Enter R Escape');
     if (!this.gridRoot) {
       this.gridRoot = new THREE.Group();
       this.world.add(this.gridRoot);
@@ -802,6 +810,25 @@ export class WorkshopScene3D {
     this.drawGround();
     this.centerOnLevel();
     this.buildGridLines();
+  }
+
+  setKeyboardCursor(tile, visible = true) {
+    this.keyboardCursor = tile ? { x: tile.x, y: tile.y } : null;
+    if (!this.keyboardCursorRoot) {
+      this.keyboardCursorRoot = new THREE.Group();
+      this.fxRoot.add(this.keyboardCursorRoot);
+    }
+    this.clearGroup(this.keyboardCursorRoot);
+    this.keyboardCursorRoot.visible = !!visible && !!tile;
+    if (!visible || !tile) return;
+    const x = tile.x;
+    const z = tile.y;
+    const tint = this.build?.valid === false ? COLORS.terra : 0xfff0a8;
+    const edge = 0.07;
+    this.cube(this.keyboardCursorRoot, x + 0.5, 0.09, z + edge / 2, 0.96, 0.07, edge, tint);
+    this.cube(this.keyboardCursorRoot, x + 0.5, 0.09, z + 1 - edge / 2, 0.96, 0.07, edge, tint);
+    this.cube(this.keyboardCursorRoot, x + edge / 2, 0.09, z + 0.5, edge, 0.07, 0.96, tint);
+    this.cube(this.keyboardCursorRoot, x + 1 - edge / 2, 0.09, z + 0.5, edge, 0.07, 0.96, tint);
   }
 
   setState(state) {
@@ -1479,7 +1506,7 @@ export class WorkshopScene3D {
   }
 
   animateBelts() {
-    const phase = this.settings.reducedMotion ? 0 : (this.time * 1.05) % 0.8;
+    const phase = this.settings.reducedMotion || this.s?.paused ? 0 : (this.time * 1.05) % 0.8;
     for (const group of this.beltMeshes.values()) {
       const { slats, alongX, travelSign, belt } = group.userData;
       if (!slats) continue;
@@ -1572,7 +1599,10 @@ export class WorkshopScene3D {
       this.fxRoot.add(this.ghostRoot);
     }
     this.clearGroup(this.ghostRoot);
-    if (!this.build || !this.build.tile) return;
+    if (!this.build || !this.build.tile) {
+      if (this.keyboardCursor) this.setKeyboardCursor(this.keyboardCursor, this.keyboardCursorRoot?.visible);
+      return;
+    }
     const { x, y } = this.build.tile;
     const def = BUILDINGS[this.build.type];
     if (!def) return;
@@ -1590,6 +1620,7 @@ export class WorkshopScene3D {
     for (const t of this.build.targets || []) {
       this.cube(this.ghostRoot, t.x + 0.5, 0.08, t.y + 0.5, 0.3, 0.16, 0.3, t.ok === false ? 0xc06a6a : 0xa9d98f);
     }
+    if (this.keyboardCursorRoot?.visible) this.setKeyboardCursor(this.keyboardCursor, true);
   }
 
   setSettings(settings) {
