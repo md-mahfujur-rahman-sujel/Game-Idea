@@ -588,16 +588,21 @@ export class HUD {
         ? `${o.output.length} / ${o.outCap} tubs · chilled`
         : `${o.output.length} / ${o.outCap} items`;
       html += `<div class="kv"><dt>Output</dt><dd>${outName}</dd></div>`;
+      if (def.logic === 'splitter') {
+        html += `<div class="note-line">Items alternate between the forward belt and the side belt. If one route is blocked, the other can still carry the item.</div>`;
+      } else if (def.logic === 'merger') {
+        html += `<div class="note-line">The merger takes one item at a time from sockets A and B, then sends it down the shared output.</div>`;
+      }
       if (o.type === 'freezer') {
         html += `<div class="note-line">Tubs are safe inside the freezer. Freshness starts on a belt: 45 s, even while blocked. Melted Mix can be refrozen twice; each cycle leaves less time.</div>`;
       }
 
       const speedMax = UPGRADES.speed.max;
-      if (o.speedLvl < speedMax) {
+      if (!def.logic && o.speedLvl < speedMax) {
         const cost = UPGRADES.speed.costs[o.speedLvl];
         html += `<div class="kv"><dt>Speed</dt><dd>Lv ${o.speedLvl} / ${speedMax}</dd></div>
           <div class="ctx-actions"><button class="btn btn-sm" data-act="up-speed" ${s.coins < cost ? 'disabled' : ''}>Upgrade speed · ${cost}</button></div>`;
-      } else {
+      } else if (!def.logic) {
         html += `<div class="kv"><dt>Speed</dt><dd>Fully upgraded</dd></div>`;
       }
       if (o.type === 'freezer') {

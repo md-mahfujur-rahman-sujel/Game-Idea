@@ -82,6 +82,11 @@ export function createObject(type, x, y, rot = 0) {
     o.recipeRefreezeCount = 0;
     o.speedLvl = 0;
     o.coolingLvl = 0;
+    if (def.logic) {
+      o.routerTimer = 0;
+      o.routerIndex = 0;
+      o.nextExit = 0;
+    }
     o.chilled = !!def.chilled;
     // Not saved: a short in-memory streak is enough for the live report.
     o.idleStreak = 0;
@@ -166,7 +171,9 @@ export function outputTargets(s, ignoreId = null) {
     if (o.id === ignoreId) continue;
     const def = BUILDINGS[o.type];
     if (def.kind === 'machine') {
-      for (const [tx, ty] of edgeTiles(o, o.rot)) out.set(tileKey(tx, ty), o);
+      for (const edge of outputEdges(o)) {
+        for (const [tx, ty] of edgeTiles(o, edge)) out.set(tileKey(tx, ty), o);
+      }
     }
     for (const lane of o.lanes || []) {
       const dir = (EDGE_DIR[lane.edge] + (def.rotatable ? o.rot : 0)) % 4;
@@ -320,7 +327,7 @@ export function buyCream(s, level, id) {
 export function upgradeSpeed(s, id) {
   const o = objectById(s, id);
   // Counters also have inputs, but they do not have speed levels.
-  if (!o || !BUILDINGS[o.type] || BUILDINGS[o.type].kind !== 'machine') return { ok: false, reason: 'No machine selected' };
+  if (!o || !BUILDINGS[o.type] || BUILDINGS[o.type].kind !== 'machine' || BUILDINGS[o.type].logic) return { ok: false, reason: 'No speed-upgradable machine selected' };
   const lvl = o.speedLvl || 0;
   if (lvl >= UPGRADES.speed.max) return { ok: false, reason: 'Speed is fully upgraded' };
   const cost = UPGRADES.speed.costs[lvl];
@@ -354,6 +361,11 @@ export function socketEdge(o, index) {
   if (o.inputs.length === 1) return opp(o.rot);
   if (index === 0) return opp(o.rot);
   return (o.rot + 1) % 4;
+}
+
+export function outputEdges(o) {
+  const offsets = BUILDINGS[o.type]?.outputEdges || [0];
+  return offsets.map(offset => (o.rot + offset) % 4);
 }
 
 export function outputEdge(o) {
@@ -500,7 +512,9 @@ export function stallReport(s, sel) {
     const outFull = o.state === 'blocked' || (o.outCap && o.output.length >= o.outCap);
     if (outFull && o.output.length) {
       const runs = [];
-      for (const start of beltsAwayFrom(s, o, outputEdge(o))) runs.push(runForwards(s, start.x, start.y));
+      for (const edge of outputEdges(o)) {
+        for (const start of beltsAwayFrom(s, o, edge)) runs.push(runForwards(s, start.x, start.y));
+      }
       const tiles = dedupe(...runs);
       const last = tiles.length ? tiles[tiles.length - 1] : null;
       const lb = last ? s.belts[tileKey(last.x, last.y)] : null;
@@ -645,6 +659,11 @@ export function sanitizeState(raw, level) {
     o.fixed = !!(level.preplaced || []).some(p => p.type === o.type && p.x === o.x && p.y === o.y);
     o.speedLvl = clampNum(ro.speedLvl, 0, 2, 0);
     o.coolingLvl = clampNum(ro.coolingLvl, 0, 1, 0);
+    if (BUILDINGS[o.type].logic) {
+      o.routerTimer = clampNum(ro.routerTimer, 0, SIM.routerTransferTicks, 0);
+      o.routerIndex = clampNum(ro.routerIndex, 0, 1, 0);
+      o.nextExit = clampNum(ro.nextExit, 0, 1, 0);
+    }
     if (o.type === 'freezer' && o.coolingLvl) o.outCap = 8;
     if (o.lanes) {
       o.lanes.forEach((lane, i) => {
@@ -667,7 +686,11 @@ export function sanitizeState(raw, level) {
     }
     if (o.output) {
       o.output = Array.isArray(ro.output)
-        ? ro.output.filter(it => it && ITEMS[it.type]).slice(0, o.outCap).map(it => ({ type: it.type, refreezeCount: clampNum(it.refreezeCount, 0, SIM.maxRefreezeCycles, 0) }))
+        ? ro.output.filter(it => it && ITEMS[it.type]).slice(0, o.outCap).map(it => ({
+          type: it.type,
+          refreezeCount: clampNum(it.refreezeCount, 0, SIM.maxRefreezeCycles, 0),
+          ...(BUILDINGS[o.type].logic === 'splitter' ? { route: clampNum(it.route, 0, 1, 0) } : {}),
+        }))
         : [];
       o.progress = clampNum(ro.progress, 0, 99999, 0);
       o.recipe = typeof ro.recipe === 'string' ? ro.recipe : null;

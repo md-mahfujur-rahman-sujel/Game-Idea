@@ -6,7 +6,7 @@ import {
   createLevelState, validatePlacement, placeObject, placeBelt, sellObject, sellBelt,
   buyCream as buyCreamState, upgradeSpeed as upgradeSpeedState,
   upgradeCooling as upgradeCoolingState, refundFor, objectAt, beltAt,
-  sanitizeState, stallReport, supplierFor, contentsOf,
+  sanitizeState, stallReport, supplierFor, contentsOf, outputEdges,
 } from './core/state.js';
 import { step, sendErrand as sendErrandSim, removeBeltItem, discardCounterItem as discardCounterItemSim, discardMachineInputItem } from './core/sim.js';
 import { primaryProgress } from './core/objectives.js';
@@ -632,7 +632,15 @@ class Controller {
   // Saves from before Town mode existed: finishing Level 3 should have unlocked it.
   repairTownUnlock() {
     const p = this.doc?.profile;
-    if (p?.completed?.level3 && Array.isArray(p.unlocked) && !p.unlocked.includes('town')) p.unlocked.push('town');
+    if (!p?.completed || !Array.isArray(p.unlocked)) return;
+    const unlock = id => { if (!p.unlocked.includes(id)) p.unlocked.push(id); };
+    if (p.completed.level3) {
+      unlock('level4');
+      unlock('town');
+    }
+    if (p.completed.level4) unlock('level5');
+    if (p.completed.level5) unlock('level6');
+    if (p.completed.level6) unlock('town');
   }
 
   onLevelComplete() {
@@ -769,21 +777,27 @@ class Controller {
         warn = 'Belt ends outside the buildable area';
       }
     } else if (def.kind === 'machine' && this.buildType !== 'counter') {
-      const tiles = edgeTiles({ x: tile.x, y: tile.y, w: def.w, h: def.h }, rot);
-      let hasBelt = false;
-      for (const [tx, ty] of tiles) {
-        const b = beltAt(s, tx, ty);
-        const o = objectAt(s, tx, ty);
-        if (b) {
-          targets.push({ x: tx, y: ty, ok: true });
-          hasBelt = true;
-        } else if (o) {
-          targets.push({ x: tx, y: ty, ok: false });
-        } else if (isBuildable(level, tx, ty)) {
-          targets.push({ x: tx, y: ty, ok: null });
+      const shape = { type: this.buildType, x: tile.x, y: tile.y, w: def.w, h: def.h, rot };
+      let connectedOutputs = 0;
+      for (const edge of outputEdges(shape)) {
+        const tiles = edgeTiles(shape, edge);
+        let hasBelt = false;
+        for (const [tx, ty] of tiles) {
+          const b = beltAt(s, tx, ty);
+          const o = objectAt(s, tx, ty);
+          if (b) {
+            const facesOut = b.dir !== opp(edge);
+            targets.push({ x: tx, y: ty, ok: facesOut });
+            hasBelt ||= facesOut;
+          } else if (o) {
+            targets.push({ x: tx, y: ty, ok: false });
+          } else if (isBuildable(level, tx, ty)) {
+            targets.push({ x: tx, y: ty, ok: null });
+          }
         }
+        if (hasBelt) connectedOutputs++;
       }
-      if (!hasBelt) warn = 'Add a belt at the output edge';
+      if (connectedOutputs < outputEdges(shape).length) warn = 'Connect every output to a belt facing away from the machine';
       for (let i = 0; i < (def.inputs || []).length; i++) {
         const edge = i === 0 ? opp(rot) : (rot + 1) % 4;
         const edgeTileList = edgeTiles({ x: tile.x, y: tile.y, w: def.w, h: def.h }, edge);
@@ -829,7 +843,11 @@ class Controller {
         const y = tile.y + lane.tile[1] + dy;
         const b = beltAt(s, x, y);
         const o = objectAt(s, x, y);
-        if (b) targets.push({ x, y, ok: true });
+        if (b) {
+          const facesOut = b.dir !== opp(dir);
+          targets.push({ x, y, ok: facesOut });
+          if (!facesOut) warn = `${ITEMS[lane.item].name} would eject into its source`;
+        }
         else if (o) {
           targets.push({ x, y, ok: false });
           warn = `${ITEMS[lane.item].name} port points at ${BUILDINGS[o.type].name}, not a belt`;
@@ -1219,7 +1237,7 @@ class Controller {
     const s = this.s;
     if (!s) return false;
     switch (c.kind) {
-      case 'hasType': return s.objects.some(o => o.type === c.type);
+      case 'hasType': return s.objects.filter(o => o.type === c.type).length >= (c.count || 1);
       case 'playerBelts': return s.counters.beltsPlaced >= c.n;
       case 'fulfilledType': return (s.counters.byType[c.type] || 0) > 0;
       case 'boughtCream': return s.creamBought > 0;

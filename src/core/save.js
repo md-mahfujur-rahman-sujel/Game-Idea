@@ -1,7 +1,7 @@
 // One versioned save document with a previous-good slot and daily recovery copy.
 // IndexedDB is primary; localStorage is the fallback and keeps a separate daily copy.
 
-export const SAVE_VERSION = 3;
+export const SAVE_VERSION = 4;
 const DB_NAME = 'little-batch-works';
 const STORE = 'saves';
 const KEY = 'current';
@@ -214,6 +214,31 @@ function addOrderBonusDefaults(state) {
   };
 }
 
+function addRoutingDeviceDefaults(state) {
+  if (!state || typeof state !== 'object') return state;
+  return {
+    ...state,
+    objects: (state.objects || []).map(object => {
+      if (object.type === 'splitter') {
+        return {
+          ...object,
+          routerTimer: Number.isFinite(object.routerTimer) ? object.routerTimer : 0,
+          nextExit: Number.isFinite(object.nextExit) ? object.nextExit : 0,
+          output: (object.output || []).map(item => ({ ...item, route: Number.isFinite(item.route) ? item.route : 0 })),
+        };
+      }
+      if (object.type === 'merger') {
+        return {
+          ...object,
+          routerTimer: Number.isFinite(object.routerTimer) ? object.routerTimer : 0,
+          routerIndex: Number.isFinite(object.routerIndex) ? object.routerIndex : 0,
+        };
+      }
+      return object;
+    }),
+  };
+}
+
 const MIGRATIONS = {
   1: doc => ({
     ...doc,
@@ -233,6 +258,18 @@ const MIGRATIONS = {
     },
     level: doc.level ? { ...doc.level, state: addOrderBonusDefaults(doc.level.state) } : null,
   }),
+  3: doc => {
+    const profile = { ...doc.profile };
+    if (profile.stats && typeof profile.stats === 'object') {
+      profile.stats = { ...profile.stats, tartOrders: profile.stats.tartOrders || 0 };
+    }
+    profile.townState = addRoutingDeviceDefaults(profile.townState);
+    return {
+      ...doc,
+      profile,
+      level: doc.level ? { ...doc.level, state: addRoutingDeviceDefaults(doc.level.state) } : null,
+    };
+  },
 };
 
 export function migrate(doc) {

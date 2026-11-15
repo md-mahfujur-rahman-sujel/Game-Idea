@@ -57,6 +57,18 @@ export const ITEMS = {
     id: 'melted', name: 'Melted Mix', display: 'Melted Mix', family: 'melted',
     tint: 0xd7e3e0, tint2: 0xa3bdb6, form: 'melted',
   },
+  wheat: {
+    id: 'wheat', name: 'Wheat', display: 'Wheat', family: 'grain',
+    tint: 0xd6b45f, tint2: 0x98783d, form: 'grain',
+  },
+  flour: {
+    id: 'flour', name: 'Flour', display: 'Flour', family: 'flour',
+    tint: 0xf2e9d4, tint2: 0xcbbb9c, form: 'flour',
+  },
+  fruitTart: {
+    id: 'fruitTart', name: 'Fruit Tart', display: 'Fruit Tart', family: 'baked',
+    tint: 0xd9a18c, tint2: 0x9e5f55, form: 'tart',
+  },
 };
 
 export const FAMILIES = {
@@ -66,7 +78,7 @@ export const FAMILIES = {
   mixFamily: { id: 'mixFamily', label: 'Ice cream mix', accepts: ['peachMix', 'appleMix', 'melted'] },
   counter: {
     id: 'counter', label: 'Counter items',
-    accepts: ['washedPeach', 'washedApple', 'peachBase', 'appleBase', 'brewedTea', 'tub'],
+    accepts: ['washedPeach', 'washedApple', 'peachBase', 'appleBase', 'brewedTea', 'tub', 'fruitTart'],
   },
   teaLeaf: { id: 'teaLeaf', label: 'Tea leaves', accepts: ['teaLeaf'] },
   water: { id: 'water', label: 'Water', accepts: ['water'] },
@@ -78,6 +90,9 @@ export const FAMILIES = {
   tub: { id: 'tub', label: 'Ice cream tubs', accepts: ['tub'] },
   tea: { id: 'tea', label: 'Brewed tea', accepts: ['brewedTea'] },
   melted: { id: 'melted', label: 'Melted mix', accepts: ['melted'] },
+  grain: { id: 'grain', label: 'Wheat', accepts: ['wheat'] },
+  flour: { id: 'flour', label: 'Flour', accepts: ['flour'] },
+  anyItem: { id: 'anyItem', label: 'Any item', accepts: Object.keys(ITEMS) },
 };
 
 export function itemName(type) {
@@ -99,5 +114,7 @@ export const FAMILY_ICON_ITEMS = {
   anyWashed: ['washedPeach', 'washedApple'],
   anyBase: ['peachBase', 'appleBase'],
   mixFamily: ['peachMix', 'tub', 'melted'],
-  counter: ['washedPeach', 'tub'],
+  counter: ['washedPeach', 'fruitTart'],
+  grain: ['wheat', 'flour'],
+  baked: ['fruitTart'],
 };

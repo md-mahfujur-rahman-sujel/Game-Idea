@@ -28,6 +28,12 @@ export const BUILDINGS = {
     desc: 'Buy cream by hand · 8 coins',
     outputs: [{ edge: 'e', tile: [0, 0], item: 'cream', every: 0, buffer: 2, manual: true }],
   },
+  wheatField: {
+    id: 'wheatField', name: 'Wheat Field', cost: 45, w: 2, h: 2, cat: 'Sources',
+    kind: 'source', rotatable: false,
+    desc: 'Wheat, 1 bundle every 6 s',
+    outputs: [{ edge: 'e', tile: [1, 0], item: 'wheat', every: 60, buffer: 2 }],
+  },
   washer: {
     id: 'washer', name: 'Washer', cost: 45, w: 1, h: 1, cat: 'Production',
     kind: 'machine', inputs: [{ family: 'anyFruit', label: null }], out: 'e',
@@ -54,6 +60,29 @@ export const BUILDINGS = {
     outCap: 4, chilled: true,
     desc: 'R8 · 8 s · chilled output 4',
   },
+  splitter: {
+    id: 'splitter', name: 'Splitter', cost: 75, w: 1, h: 1, cat: 'Conveyors',
+    kind: 'machine', logic: 'splitter', inputs: [{ family: 'anyItem', label: null }],
+    out: 'e', outputEdges: [0, 1], outCap: 4,
+    desc: 'Alternates items between the forward and side belts',
+  },
+  merger: {
+    id: 'merger', name: 'Merger', cost: 90, w: 1, h: 1, cat: 'Conveyors',
+    kind: 'machine', logic: 'merger',
+    inputs: [{ family: 'anyItem', label: 'A' }, { family: 'anyItem', label: 'B' }],
+    out: 'e', outCap: 4,
+    desc: 'Combines two belt lines into one',
+  },
+  flourMill: {
+    id: 'flourMill', name: 'Flour Mill', cost: 65, w: 1, h: 1, cat: 'Production',
+    kind: 'machine', inputs: [{ family: 'grain', label: null }], out: 'e',
+    desc: 'R9 · 4 s · wheat to flour',
+  },
+  bakery: {
+    id: 'bakery', name: 'Bakery', cost: 95, w: 1, h: 1, cat: 'Production',
+    kind: 'machine', inputs: [{ family: 'flour', label: 'A' }, { family: 'anyBase', label: 'B' }], out: 'e',
+    desc: 'R10 / R11 · 7 s · bakes fruit tarts',
+  },
   counter: {
     id: 'counter', name: 'Service Counter', cost: 50, w: 2, h: 2, cat: 'Service',
     kind: 'counter', inputs: [{ family: 'counter', label: null }], outCap: 2,
@@ -66,8 +95,9 @@ export const BUILDINGS = {
 };
 
 export const BUILD_ORDER = [
-  'orchard', 'teaPatch', 'waterPump', 'dairyCrate',
-  'washer', 'press', 'brewer', 'mixer', 'freezer',
+  'orchard', 'teaPatch', 'waterPump', 'dairyCrate', 'wheatField',
+  'washer', 'press', 'brewer', 'mixer', 'freezer', 'flourMill', 'bakery',
+  'splitter', 'merger',
   'belt', 'counter',
 ];
 
@@ -82,6 +112,9 @@ export const RECIPES = [
   { id: 'R8', machine: 'freezer', inputs: ['peachMix'], out: 'tub', ticks: 80 },
   { id: 'R8a', machine: 'freezer', inputs: ['appleMix'], out: 'tub', ticks: 80 },
   { id: 'R8m', machine: 'freezer', inputs: ['melted'], out: 'tub', ticks: 40 },
+  { id: 'R9', machine: 'flourMill', inputs: ['wheat'], out: 'flour', ticks: 40 },
+  { id: 'R10', machine: 'bakery', inputs: ['flour', 'peachBase'], out: 'fruitTart', ticks: 70 },
+  { id: 'R11', machine: 'bakery', inputs: ['flour', 'appleBase'], out: 'fruitTart', ticks: 70 },
 ];
 
 export const UPGRADES = {
@@ -92,6 +125,7 @@ export const UPGRADES = {
 export const SIM = {
   tickMs: 100,
   beltStep: 0.1,
+  routerTransferTicks: 10,
   coldFreshTicks: 450,
   coldWarnTicks: 150,
   meltAutoDiscardTicks: 150,

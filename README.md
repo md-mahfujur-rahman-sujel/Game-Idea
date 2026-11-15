@@ -2,7 +2,7 @@
 
 A cozy 3D voxel conveyor-routing tycoon. Build a food workshop, route the belts, serve the market, and grow a town through an ongoing saga. This repository contains the **web build** (Vite + Three.js, vanilla JavaScript).
 
-After the authored campaign, Town mode keeps the workshop and town progress. Town Levels continue without a gameplay cap, and after the authored story chapters, repeatable saga chapters generate fresh order goals with rewards. Weekly goals and fast-delivery bonuses add optional goals without order failure. Story progress, weekly goals, and the active saga chapter are stored in the local save.
+The seven-stage opening campaign teaches basic production, split routing, merging, and a wheat-to-tart bakery chain before Town mode unlocks. Town mode keeps the workshop layout and progress, grows through an uncapped level track, and continues with repeatable saga chapters. Weekly goals and fast-delivery bonuses add optional goals without order failure. Story progress, weekly goals, and the active saga chapter are stored in the local save.
 
 ## Run it
 
@@ -62,12 +62,12 @@ src/styles.css        design system and responsive layout
 tests/                Node unit tests for simulation, state, objectives, reports and saves
 scripts/              authored-content validator
 .github/workflows/    CI: test, validate and build
-prd.md                canonical product requirements (v3.7)
+prd.md                canonical product requirements (v4.5)
 ```
 
 ## Save data
 
-Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. The active level and Town workshop layout are saved separately so leaving Town mode does not erase its layout. A v1-to-v2 migration preserves Town saves, a previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
+Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. The active level and Town workshop layout are saved separately so leaving Town mode does not erase its layout. Ordered v1-to-v4 migrations preserve existing progress and add Town goals, router buffers, and fruit-tart tracking. A previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
 
 ## Internal reference material
 

@@ -77,6 +77,15 @@ export const ITEM_SVG = {
   melted(tint, dark) {
     return wrap(`<path d="M4.4 15.6c1.2-1.4 2.6-1.4 3.8 0 1.2 1.4 2.6 1.4 3.8 0 1.2-1.4 2.6-1.4 3.8 0 1.2 1.4 2.6 1.4 3.8 0v3.2c0 .8-.7 1.4-1.5 1.4H5.9c-.8 0-1.5-.6-1.5-1.4z" fill="${tint}" stroke="${dark}"/><path d="M8.6 12.4c.4-1.6 1.6-2.4 3.4-2.4s3 .8 3.4 2.4" stroke="${dark}" opacity=".55"/>`);
   },
+  grain(tint, dark) {
+    return wrap(`<path d="M12 21V4M12 10C8 10 6 8 6 5c3.8 0 6 1.8 6 5zM12 14c4 0 6-2 6-5-3.8 0-6 1.8-6 5zM12 8C9 8 8 6.8 8 4c2.8 0 4 1.4 4 4z" fill="${tint}" stroke="${dark}"/>`);
+  },
+  flour(tint, dark) {
+    return wrap(`<path d="M7 8h10l1.2 11H5.8z" fill="${tint}" stroke="${dark}"/><path d="M9 8V5.2h6V8M7.2 12h9.6M8.2 15.4h7.6" stroke="${dark}"/>`);
+  },
+  tart(tint, dark) {
+    return wrap(`<circle cx="12" cy="12.5" r="7.7" fill="${tint}" stroke="${dark}"/><circle cx="12" cy="12.5" r="5.6" stroke="${dark}"/><path d="M12 4.8v2.4M19.2 10l-2.3.8M16.4 18.8l-1.4-2M7.6 18.8l1.4-2M4.8 10l2.3.8" stroke="${dark}"/>`);
+  },
 };
 
 function hex(n) {
@@ -95,11 +104,16 @@ const BUILDING_PATHS = {
   teaPatch: '<path d="M12 19.6V9.4"/><path d="M12 12.4C8.4 12.4 6 10.6 6 7c3.6 0 6 2 6 5.4z"/><path d="M12 9.8c0-3 1.8-5 5.2-5 0 3.2-1.8 5-5.2 5z"/><path d="M7.4 19.6h9.2"/>',
   waterPump: '<path d="M6 19.6h12M8.4 19.6V8.2h6.2v11.4"/><path d="M14.6 10.4h3.8v3.2h-3.8"/><circle cx="11.4" cy="6.2" r="2.2"/>',
   dairyCrate: '<path d="M4.6 9.4h14.8v10.2H4.6z"/><path d="M4.6 12.6h14.8M9.2 9.4v10.2M14.8 9.4v10.2"/><path d="M10 6.8h4v2.6h-4z"/>',
+  wheatField: '<path d="M12 20V5M12 12c-3 0-5-1.8-5-4.8 3 0 5 1.8 5 4.8zM12 15c3 0 5-1.8 5-4.8-3 0-5 1.8-5 4.8z"/><path d="M6 20h12"/>',
   washer: '<rect x="4.6" y="4.4" width="14.8" height="15.2" rx="2.4"/><circle cx="12" cy="12.8" r="4.4"/><path d="M7.4 7.4h1.2M10 7.4h1.2"/>',
   press: '<path d="M5 8.4h14M6.4 4.6h11.2v3.8H6.4zM9.4 8.4v4.2h5.2V8.4"/><path d="M7 16.4h10v3.4H7z"/>',
   brewer: '<path d="M5.6 9.4h10.8v6.2a3.4 3.4 0 01-3.4 3.4H9a3.4 3.4 0 01-3.4-3.4z"/><path d="M16.4 10.8h2a2.2 2.2 0 010 4.4h-2"/><path d="M8.4 5.6c.2-1.4 1.2-2 2-2M12 5.6c.2-1.4 1.2-2 2-2"/>',
   mixer: '<path d="M4.6 10.4h14.8v2.2a5.4 5.4 0 01-5.4 5.4H10a5.4 5.4 0 01-5.4-5.4z"/><path d="M12 10.2V4.4M8.6 6.4l6.8-2"/>',
   freezer: '<rect x="4.8" y="4.4" width="14.4" height="15.2" rx="2.4"/><path d="M12 8v8M8.6 10l6.8 4M15.4 10l-6.8 4"/><path d="M5 17h14" opacity=".5"/>',
+  splitter: '<path d="M4 12h6M10 12l7-6M10 12l7 6"/><path d="M16 4l4 2-4 2M16 16l4 2-4 2"/>',
+  merger: '<path d="M4 6h5l7 6M4 18h5l7-6M16 12h4"/><path d="M17 9l3 3-3 3"/>',
+  flourMill: '<path d="M5 20h14M7 17V9l5-5 5 5v8M8 12h8M10 15h4"/>',
+  bakery: '<path d="M4.5 20V9h15v11M3.5 9l2-4h13l2 4M8 13h8v7H8zM17 5V3h2v2"/>',
   counter: '<path d="M4 8.4h16M5.4 8.4v4.8h13.2V8.4"/><path d="M6.6 13.2v6.4M17.4 13.2v6.4M10 16h4.2"/><path d="M5.4 8.4l1.6-3h10l1.6 3"/>',
   belt: '<path d="M3.6 12h4.2M16.2 12h4.2"/><rect x="7.8" y="9.4" width="8.4" height="5.2" rx="1.4"/><path d="M9.6 9.4v5.2M12 9.4v5.2M14.4 9.4v5.2"/><path d="M17 9l3 3-3 3"/>',
 };

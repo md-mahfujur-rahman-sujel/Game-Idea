@@ -1,11 +1,18 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.4 (supersedes v4.3 and all earlier drafts)
+**Version:** 4.5 (supersedes v4.4 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.4
+
+| # | Change |
+|---|---|
+| 1 | Added a controlled Splitter and Merger, plus a wheat-to-flour fruit-tart chain with three authored teaching levels before the persistent Town unlock. |
+| 2 | Expanded content tables, Town unlocks and save migration to cover the added router state and fruit-tart order progress; advanced the save schema to v4. |
 
 ### Changes from v4.3
 
@@ -107,7 +114,7 @@ The game takes visual direction from a cheerful, dense food-factory illustration
 
 ### Goals
 
-- Ship a polished MVP: an interactive tutorial plus three authored levels in one compact world.
+- Ship a polished campaign: an interactive tutorial plus six authored levels in one compact world, followed by persistent Town mode.
 - Teach belt routing and production chains through guided onboarding, then remove the training wheels.
 - Make blockages and spoilage diagnosable at a glance.
 - Differentiate from generic idle tycoons with one signature mechanic: the cold chain.
@@ -123,7 +130,7 @@ The game takes visual direction from a cheerful, dense food-factory illustration
 - iOS, macOS, and Linux builds; controller support; tablet-specific or portrait-first layouts.
 - Complex physics, realistic food chemistry, or employee needs (hunger, wages, skills).
 - Monetization, ads, loot boxes, premium currency, or consumables.
-- Additional food businesses beyond ice cream and tea.
+- Additional food businesses beyond fruit cups, tea, ice cream, and the opening bakery line.
 - Online accounts or cloud saves.
 - Reproducing the source image's characters, company identity, graphic design, or layout.
 
@@ -225,20 +232,20 @@ Target session length 5–20 minutes. No requirement to stay online or keep the 
 ### 6.2 Conveyors and routing
 
 - Belts move one item per segment, one tile per second (one tile per 10 logic ticks), in a fixed direction.
-- The MVP ships **straight and corner** pieces only. Splitters and mergers are post-MVP.
+- The MVP ships straight and corner belts, a Splitter that alternates items between its forward and side outputs, and a Merger that combines two input lines into one output.
 - Belts connect only when direction and machine ports are compatible. The placement ghost previews the connection: a lit arrow at the outgoing edge, a lit socket at the receiving port, and an explicit mismatch reason otherwise.
 - **No direct port-to-port transfer.** Every transfer from a source or machine output to another machine or counter input needs at least one belt tile between the ports. Two adjacent ports never connect on their own; the placement ghost shows the missing link.
 - An item advances only when the next segment or machine input socket has room. A blocked item stays visible on its segment; the segment shows a blocked icon.
-- A belt tile accepts at most one inbound belt. A second inbound line is rejected with a clear reason; merging requires a splitter, which is not part of the launch build.
+- A belt tile accepts at most one inbound belt. A second inbound line is rejected with a clear reason; use a Merger building to join lines. Split branching is allowed only through a Splitter building.
 - Machines accept only the item types declared for each input socket and hold limited buffers (default: 2 per input socket, 2 output). A wrong-type item is never accepted and the socket reports "wrong item type".
 - **Any item on a belt can be removed:** select the item, choose Remove, and confirm. The item is discarded with no refund and the segment frees immediately. This is the guaranteed remedy for wrong-type items and spoiled goods; no belt can be permanently deadlocked.
 - The inspection UI names the origin of a blockage ("Freezer output full", "Washer needs peaches") and highlights the affected belt path.
 - Clicking any item shows its type and freshness if applicable.
-- The MVP has no branching belts, so every belt run is a single unambiguous path from one output to one input socket.
+- Branches and joins happen only at explicit Splitter and Merger buildings, so every belt run remains an unambiguous path between declared ports.
 
 ### 6.3 Ingredients, recipes, and machines
 
-**Sources (4):**
+**Sources (5):**
 
 | Source | Output | Notes |
 |---|---|---|
@@ -246,13 +253,15 @@ Target session length 5–20 minutes. No requirement to stay online or keep the 
 | Tea Patch | Tea Leaves | 1 leaf every 6 s |
 | Water Pump | Water | 1 water every 5 s |
 | Dairy Crate | Cream | **Manual purchase:** 8 coins per cream, emitted on request; cap 12 per level. The crate idles until the player buys. |
+| Wheat Field | Wheat | 1 bundle every 6 s; feeds the Flour Mill |
 
 Sugar is removed from the game: no recipe uses it.
 
-**Processors (5):** Washer, Press, Brewer, Mixer, Freezer.
+**Processors (7):** Washer, Press, Brewer, Mixer, Freezer, Flour Mill, Bakery.
+**Routing devices (2):** Splitter and Merger.
 **Service (1):** Service Counter.
 
-**Recipes (8, all data-driven):**
+**Recipes (13 data-driven definitions across 11 player-facing recipes; freezer has peach, apple, and refreeze variants):**
 
 | # | Input | Machine | Output | Time |
 |---|---|---|---|---|
@@ -264,8 +273,13 @@ Sugar is removed from the game: no recipe uses it.
 | R6 | Peach Base (socket A) + Cream (socket B) | Mixer | Peach Ice Cream Mix | 5 s |
 | R7 | Apple Base (socket A) + Cream (socket B) | Mixer | Apple Ice Cream Mix | 5 s |
 | R8 | Ice Cream Mix **or** Melted Mix | Freezer | Ice Cream Tub | 8 s (4 s for Melted Mix) |
+| R8a | Apple Ice Cream Mix | Freezer | Ice Cream Tub | 8 s |
+| R8m | Melted Mix | Freezer | Ice Cream Tub | 4 s; capped at two refreeze cycles |
+| R9 | Wheat | Flour Mill | Flour | 4 s |
+| R10 | Flour (socket A) + Peach Base (socket B) | Bakery | Fruit Tart | 7 s |
+| R11 | Flour (socket A) + Apple Base (socket B) | Bakery | Fruit Tart | 7 s |
 
-**Service Counter accepts:** Washed Peach, Washed Apple, Peach Base, Apple Base, Brewed Tea, and Ice Cream Tub. Packing is a counter animation, not a recipe. The counter input buffer holds 2 items and is chilled: items inside it do not age.
+**Service Counter accepts:** Washed Peach, Washed Apple, Peach Base, Apple Base, Brewed Tea, Ice Cream Tub, and Fruit Tart. Packing is a counter animation, not a recipe. The counter input buffer holds 2 items and is chilled: items inside it do not age.
 
 #### Machine ports
 
@@ -277,7 +291,10 @@ Every machine port is a visible socket on a specific tile edge, labeled with the
 | Any washed fruit | Washed Peach, Washed Apple |
 | Any fruit base | Peach Base, Apple Base |
 | Ice Cream Mix family | Ice Cream Mix, Melted Mix |
-| Counter items | Washed Peach, Washed Apple, Peach Base, Apple Base, Brewed Tea, Ice Cream Tub |
+| Counter items | Washed Peach, Washed Apple, Peach Base, Apple Base, Brewed Tea, Ice Cream Tub, Fruit Tart |
+| Any routeable item | All production items |
+| Wheat | Wheat |
+| Flour | Flour |
 
 | Machine | Input sockets | Output |
 |---|---|---|
@@ -286,12 +303,16 @@ Every machine port is a visible socket on a specific tile edge, labeled with the
 | Brewer | 2: **A** Tea Leaves, **B** Water | 1 |
 | Mixer | 2: **A** any fruit base, **B** Cream | 1 |
 | Freezer | 1 (Ice Cream Mix family) | 1 |
+| Flour Mill | 1 (Wheat) | 1 |
+| Bakery | 2: **A** Flour, **B** any fruit base | 1 |
+| Splitter | 1 (any routeable item) | 2: forward and side, alternating |
+| Merger | 2: **A** and **B** (any routeable item) | 1 |
 | Service Counter | 1 (counter items) | — |
 
 - Each input socket has its own buffer of 2 items; a full socket blocks only its own belt.
 - A two-input machine starts a recipe only when both sockets hold a valid item. If one socket is empty, the machine shows a "needs <item>" status badge on that socket.
 - A Mixer produces a mix of the same fruit as its base input; mixing fruits is not allowed, and a mismatched item is rejected with a clear reason.
-- Because there are no mergers, each ingredient reaches a two-input machine by its own belt. The tutorial and level layouts leave room for two entry edges.
+- Each ingredient reaches a two-input machine by its own belt, and the Merger combines lines only at its declared input sockets. Teaching layouts leave room for the required entry edges.
 
 Each machine also has: base processing time, visual states (idle / working / blocked / disabled), and an inspect panel showing recipe, progress, buffers, and upgrades. All values live in content data files, never in presentation code.
 
@@ -364,7 +385,7 @@ This is the game's single differentiator. It ships as the **last cuttable P1 fea
 
 ### 6.8 Progression and level structure
 
-Progress is chapter-based and saved at meaningful milestones. Each level introduces exactly one mechanic, teaches it in a safe context, then asks the player to apply it.
+Progress is chapter-based and saved at meaningful milestones. The campaign teaches one central mechanic per level; later levels combine known machines and routes in safe, forgiving layouts.
 
 | # | Level | Introduces | Pre-placed | Starting coins | Primary objective | Optional objectives |
 |---|---|---|---|---|---|---|
@@ -372,8 +393,9 @@ Progress is chapter-based and saved at meaningful milestones. Each level introdu
 | 1 | **The Long Way Around** | Belt direction, corners, input/output ports, Press | Orchard, Service Counter | 165 | Fulfill 5 fruit orders (washed or base, at least 2 base) | Use no more than 12 player-placed belts; no blocked machine for 30 s |
 | 2 | **A Cup of Calm** | Tea chain: leaves, water, Brewer's two sockets | Orchard, Washer, Service Counter, and the orchard→washer→counter belts | 195 | Fulfill 6 orders including 3 teas | Take no reputation loss; use no more than 12 player-placed belts |
 | 3 | **Chill Factor** | Dairy Crate, Mixer, Freezer, cold chain, mild bottleneck | Orchard, Washer, Press, Service Counter, connecting belts | 300 | Fulfill 6 orders including 2 ice creams | No tub melts; complete without selling a machine |
-| 4 | *Two Lines, One Shop* (post-MVP) | Space pressure across both product lines | — | — | — | — |
-| 5 | *Market Day* (post-MVP capstone) | Combined demand, queues, one layout constraint | — | — | — | — |
+| 4 | **Two Ways to Peach** | Splitter: alternate a peach line between two washers | Orchard, Service Counter | 300 | Serve 4 Peach Cups through both routes | No customer leaves; no machine blocked for 30 s |
+| 5 | **One Counter, Two Lines** | Merger: fairly combine peach and apple lines | Orchard, Service Counter | 420 | Serve 3 Peach Cups and 3 Apple Cups through the Merger | No customer leaves; no machine blocked for 30 s |
+| 6 | **A Fresh Batch** | Wheat Field, Flour Mill, Bakery, and Fruit Tart | Orchard, Washer, Press, Service Counter | 380 | Bake and serve 3 Fruit Tarts | No customer leaves; use no more than 24 belts |
 
 **Cost audit against the 90% budget rule** (belts at 4 coins per tile; values from §10):
 
@@ -383,13 +405,16 @@ Progress is chapter-based and saved at meaningful milestones. Each level introdu
 | 1 | Washer 45 + Press 55 + about 10 belts 40 | 140 | 148 | Pass |
 | 2 | Tea Patch 40 + Water Pump 30 + Brewer 60 + about 10 belts 40 | 170 | 175 | Pass |
 | 3 | Dairy Crate 30 + Mixer 75 + Freezer 110 + about 12 belts 48 | 263 | 270 | Pass |
+| 4 | Splitter 75 + 2 Washers 90 + about 25 belts 100 | 265 | 270 | Pass |
+| 5 | Merger 90 + 2 Washers 90 + about 28 belts 112 | 292 | 378 | Pass |
+| 6 | Wheat Field 45 + Flour Mill 65 + Bakery 95 + about 19 belts 76 | 281 | 342 | Pass |
 
-All four levels now pass by construction. The M2/M3 balance pass may move belt counts, pre-placed objects, or starting coins only within these bounds, and must record final values in the level data files. Cream is bought from order income in level 3; the level-3 budget does not depend on cream spend.
+All seven authored stages (tutorial and levels 1–6) pass by construction. The M2/M3 balance pass may move belt counts, pre-placed objects, or starting coins only within these bounds, and must record final values in the level data files. Cream is bought from order income in level 3; the level-3 budget does not depend on cream spend.
 
-- Launch content: tutorial + 3 levels, roughly 30–45 minutes for core progression, replayable via optional objectives.
+- Launch content: tutorial + 6 levels, roughly 60–90 minutes for core progression, replayable via optional objectives.
 - No mandatory timed medals; optional objectives are badges only.
 - Completion of a primary objective unlocks the next level and persists immediately.
-- **v4.0:** the tutorial and levels 1–3 are Story Chapter 1. Finishing Level 3 unlocks Town mode (§6.8a). The "30–45 minutes" launch figure above describes the campaign only, not total content.
+- The tutorial and levels 1–3 are Story Chapter 1; levels 4–5 teach explicit routing and level 6 completes the opening bakery story. Finishing Level 6 unlocks persistent Town mode (§6.8a).
 
 ### 6.8a Long-term progression: Town mode (v4.0)
 
@@ -420,14 +445,15 @@ All four levels now pass by construction. The M2/M3 balance pass may move belt c
 | 3 | Speed upgrade 1; Tea Patch and Water Pump |
 | 5 | Dairy Crate and Mixer; board grows to 4 slots |
 | 8 | Freezer and cold chain; first land expansion |
-| 10 | Splitter belt; chapter 3 story |
+| 10 | Splitter; chapter 3 story |
 | 12 | Combo orders (two or three product lines in one order) |
-| 15 | Merger belt; worker role assignment |
-| 18 | Bakery chapter: Dough Mixer and Oven |
+| 15 | Merger; worker role assignment |
+| 18 | Wheat Field and Flour Mill |
+| 20 | Bakery and Fruit Tart orders |
 | 22 | Second district; board grows to 5 slots |
-| 25 | Belt speed upgrade; cooling upgrade 2 |
+| 25 | Belt speed upgrade; cooling upgrade |
 | 30 | Market stall customization; board grows to 6 slots |
-| 35 to 50 | New recipe families, cosmetic themes, landmark stages, third district |
+| 35 onward | New saga chapters, cosmetic themes, landmark stages, and further district expansion |
 
 Recipes and machines are data-driven. Each has `unlockLevel`; the build menu shows locked items with their requirement, never hides them.
 
@@ -471,15 +497,15 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - Every unlock must be reachable by play alone; the M3 balance pass sets exact numbers.
 - Reputation (§6.7) still applies to the story levels only. In Town mode, XP and Town Level replace it for gating, so spending still cannot lock progression.
 
-#### Save schema v3
+#### Save schema v4
 
-Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily and weekly goals, permits, return-time data, and active order bonus tiers. Migration v1 to v2 copies the current Town state into the separate Town slot when a v1 save was inside Town mode; v2 to v3 adds weekly goal and bonus-tier defaults. Every loaded layout is sanitized against its level data.
+Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily and weekly goals, permits, return-time data, active order bonus tiers, and routing-device queues and timers. Migrations v1 to v2 preserve a Town session in the separate Town slot; v2 to v3 adds weekly goal and bonus-tier defaults; v3 to v4 adds fruit-tart Town statistics and router state defaults. Every loaded layout is sanitized against its level data.
 
 #### Requirements
 
 | ID | Requirement | Priority |
 |---|---|---|
-| FR-27 | Persistent Town mode unlocked after Level 3 | P1 |
+| FR-27 | Persistent Town mode unlocked after Level 6; legacy saves already in Town remain accessible | P1 |
 | FR-28 | XP, Town Level, and unlock gating from data tables | P1 |
 | FR-29 | Order board with generator that guarantees producible orders | P1 |
 | FR-30 | Land expansion with permits | P1 |
@@ -716,12 +742,17 @@ These are starting values for M2, tuned during M3. All live in data files.
 | Tea Patch | 40 | 2×2 | 1 tea leaf every 6 s |
 | Water Pump | 30 | 1×1 | 1 water every 5 s |
 | Dairy Crate | 30 | 1×1 | Manual buy: 8 coins per cream, emits 1 when requested; cap 12 per level; idles until bought |
+| Wheat Field | 45 | 2×2 | 1 wheat bundle every 6 s |
 | Washer | 45 | 1×1 | R1 / R2, 3 s |
 | Press | 55 | 1×1 | R3 / R4, 4 s |
 | Brewer | 60 | 1×1 | R5, 6 s; two input sockets |
 | Mixer | 75 | 1×1 | R6 / R7, 5 s; two input sockets |
 | Freezer | 110 | 2×2 | R8, 8 s (4 s for Melted Mix); chilled output capacity 4 |
-| Service Counter | 50 | 2×2 | Accepts the six counter items; chilled buffer of 2 |
+| Flour Mill | 65 | 1×1 | R9, wheat to flour, 4 s |
+| Bakery | 95 | 1×1 | R10 / R11, flour + fruit base to Fruit Tart, 7 s |
+| Splitter | 75 | 1×1 | Alternates items between forward and side outputs; 1 item per second |
+| Merger | 90 | 1×1 | Fairly combines two inputs into one output; 1 item per second |
+| Service Counter | 50 | 2×2 | Accepts seven counter items; chilled buffer of 2 |
 | Belt (straight / corner) | 4 per tile | 1×1 | 1 tile/s |
 | Speed upgrade | 40 then 90 | — | −20% time per level, per machine |
 | Cooling upgrade | 60 | — | Chilled output capacity 4 → 8 |
@@ -733,6 +764,7 @@ These are starting values for M2, tuned during M3. All live in data files.
 | Tea | 22 | +3 | — |
 | Ice cream tub | 32 | +4 | — |
 | Tea + tub combo | 55 | +6 | — |
+| Fruit Tart | 48 | +5 | Fruit Tart |
 | Market errand (anti-soft-lock) | 6 | 0 | — |
 
 | Simulation constant | Value |
@@ -744,7 +776,7 @@ These are starting values for M2, tuned during M3. All live in data files.
 | Melted Mix re-freeze | 4 s |
 | Melted Mix auto-discard | 15 s |
 | Sell refund | 70% |
-| Starting coins | Authored per level: T 120, L1 165, L2 195, L3 300 (all pass the §6.8 balance gate) |
+| Starting coins | Authored per level: T 120, L1 165, L2 195, L3 300, L4 300, L5 420, L6 380 (all pass the §6.8 balance gate) |
 | Cream price / cap | 8 coins per unit / 12 per level |
 | Patience | 180 s tutorial / 120 s early / 90 s later |
 
@@ -782,8 +814,8 @@ These are starting values for M2, tuned during M3. All live in data files.
 | FR-24 | P0 | Android `.apk`: signed release APK, sideloadable, Android 8.0+, landscape, fully offline, saves survive backgrounding and relaunch |
 | FR-25 | P0 | One save schema and content set across web, Windows, and Android, with platform save adapters and a JSON mirror on native builds |
 | FR-26 | P0 | Reproducible build pipeline producing all three artifacts from one commit, with version stamping and SHA-256 checksums |
-| FR-27 | P2 | Splitters/mergers, belt painting, cloud saves, achievements, extra chapters, seasons, landmark meter |
-| FR-28 | P2 | Desktop auto-update, Play Store release (AAB), iOS build, PWA install |
+| FR-35 | P2 | Belt painting, cloud saves, achievements, seasons, landmark meter |
+| FR-36 | P2 | Desktop auto-update, Play Store release (AAB), iOS build, PWA install |
 | FR-29 | P0 | Labeled input sockets on two-input machines (Brewer, Mixer), per-socket buffers, "needs <item>" status, and the Dairy Crate source with manual per-unit cream purchase and per-level cap |
 | FR-30 | P0 | Universal item removal: any item on a belt can be discarded with confirmation, and Melted Mix auto-discards after 15 s, so no item can permanently block a line |
 | FR-31 | P0 | Counter delivery: auto-match buffered items to the oldest active order, "no order needs this" state, and discard for buffered items |
@@ -818,7 +850,7 @@ These are starting values for M2, tuned during M3. All live in data files.
 
 ### MVP vertical slice
 
-One authored world, tutorial + 3 levels, 8 recipes, 6 production/service building types plus 4 sources, straight/corner belts, two-input machines with labeled sockets, orders with coins and reputation, level unlocks, anti-soft-lock recovery, cosmetic workers, autosave, settings, pause, touch and mouse/keyboard input, and a complete original visual identity — delivered as three builds (web, Windows `.exe`, Android `.apk`) from one codebase.
+One authored world, tutorial + 6 levels, 13 data-driven recipe definitions, 7 processors, 2 routing devices, 5 sources, straight/corner belts, two-input machines with labeled sockets, orders with coins and reputation, persistent Town progression, anti-soft-lock recovery, cosmetic workers, autosave, settings, pause, touch and mouse/keyboard input, and a complete original visual identity — delivered as three builds (web, Windows `.exe`, Android `.apk`) from one codebase.
 
 ### Milestones (target 10–12 weeks; outer bound 16 with in-house art)
 
@@ -967,7 +999,7 @@ The MVP is acceptable for public release (web, Windows, and Android) when:
 | Seasons: real-time or milestone-bound? | Milestone-bound, never real-time (post-MVP) |
 | Final name, cast, and art style? | *Little Batch Works*, Mosslight Market, mole/squirrel/rabbit cast — pending creative and name-availability review |
 | Art sourcing: in-house or licensed? | Decide before M2; budgets assume in-house or a small licensed set |
-| Splitters/mergers at launch? | No; only if the simple loop proves too limited |
+| Splitters/mergers at launch? | Yes, taught in campaign levels 4 and 5 after basic belt routing |
 | Cream price and cap (8 coins / 12 per level)? | Tune in M3 against level-3 income; keep the purchase manual |
 
 ---

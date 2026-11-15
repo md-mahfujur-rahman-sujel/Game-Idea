@@ -4,12 +4,14 @@
 // touches the deterministic simulation except `townTemplate`, which is a pure function of the
 // state it is given.
 
-const MAX_SAFE_LEVEL = Number.MAX_SAFE_INTEGER;
+// Safe-integer boundary keeps saves and generated saga goals exact.
+export const MAX_TOWN_LEVEL = Number.MAX_SAFE_INTEGER;
 const SAGA_GOALS = {
   fulfilled: { unit: 'orders' },
   baseOrders: { unit: 'puree orders' },
   teaOrders: { unit: 'teas' },
   tubOrders: { unit: 'ice creams' },
+  tartOrders: { unit: 'fruit tarts' },
 };
 
 // ---------------------------------------------------------------- XP and level
@@ -21,14 +23,14 @@ export function xpToNext(level) {
 export function ensureTown(profile) {
   if (!profile) return profile;
   if (!Number.isFinite(profile.townLevel) || profile.townLevel < 1) profile.townLevel = 1;
-  profile.townLevel = Math.min(MAX_SAFE_LEVEL, Math.floor(profile.townLevel));
+  profile.townLevel = Math.min(MAX_TOWN_LEVEL, Math.floor(profile.townLevel));
   if (!Number.isFinite(profile.xp) || profile.xp < 0) profile.xp = 0;
   if (!Number.isFinite(profile.permits) || profile.permits < 0) profile.permits = 0;
   if (!Number.isFinite(profile.expansion) || profile.expansion < 0) profile.expansion = 0;
   profile.expansion = Math.min(EXPANSIONS.length - 1, Math.floor(profile.expansion));
   if (!profile.stats || typeof profile.stats !== 'object') profile.stats = {};
   const st = profile.stats;
-  for (const k of ['fulfilled', 'items', 'baseOrders', 'teaOrders', 'tubOrders']) {
+  for (const k of ['fulfilled', 'items', 'baseOrders', 'teaOrders', 'tubOrders', 'tartOrders']) {
     if (!Number.isFinite(st[k]) || st[k] < 0) st[k] = 0;
   }
   if (!st.byType || typeof st.byType !== 'object') st.byType = {};
@@ -56,7 +58,7 @@ export function addXp(profile, amount) {
   ensureTown(profile);
   const from = profile.townLevel;
   profile.xp += Math.max(0, Math.round(Number.isFinite(amount) ? amount : 0));
-  while (profile.townLevel < MAX_SAFE_LEVEL && profile.xp >= xpToNext(profile.townLevel)) {
+  while (profile.townLevel < MAX_TOWN_LEVEL && profile.xp >= xpToNext(profile.townLevel)) {
     profile.xp -= xpToNext(profile.townLevel);
     profile.townLevel++;
   }
@@ -72,12 +74,11 @@ export function addXp(profile, amount) {
 
 // ---------------------------------------------------------------- unlock tree
 
-// Building -> Town Level that unlocks it. Machines the game does not have yet (splitter,
-// merger, bakery) are listed in the PRD roadmap and are deliberately not faked here.
 export const BUILDING_UNLOCK = {
   belt: 1, orchard: 1, washer: 1, press: 2,
   teaPatch: 3, waterPump: 3, brewer: 3,
   dairyCrate: 5, mixer: 5, freezer: 8,
+  splitter: 10, merger: 15, wheatField: 18, flourMill: 18, bakery: 20,
 };
 export const SPEED_UPGRADE_LEVEL = 3;
 export const PERMIT_LEVELS = [8, 15, 22, 30, 40];
@@ -87,8 +88,11 @@ export const UNLOCK_NOTES = {
   3: ['Tea Patch, Water Pump and Brewer: tea orders', 'Machine speed upgrades'],
   5: ['Dairy Crate and Mixer', 'Order board grows to 4 slots'],
   8: ['Freezer and ice cream orders', 'First land expansion', '1 Expansion Permit'],
+  10: ['Splitter: send one line along two routes'],
   12: ['Combo orders: two products in one order'],
-  15: ['1 Expansion Permit'],
+  15: ['Merger: combine two compatible lines', '1 Expansion Permit'],
+  18: ['Wheat Field and Flour Mill'],
+  20: ['Bakery: fruit tart orders'],
   22: ['Second expansion', 'Order board grows to 5 slots', '1 Expansion Permit'],
   30: ['Order board grows to 6 slots', '1 Expansion Permit'],
   40: ['1 Expansion Permit'],
@@ -117,6 +121,7 @@ export const TOWN_ORDER_POOL = [
   { type: 'appleBase', min: 2, price: 14, rep: 2 },
   { type: 'brewedTea', min: 3, price: 22, rep: 3 },
   { type: 'tub', min: 8, price: 32, rep: 4 },
+  { type: 'fruitTart', min: 20, price: 48, rep: 5 },
 ];
 
 function lcg(seed) {
@@ -251,16 +256,19 @@ export function recordOrder(profile, order) {
   let hasBase = false;
   let hasTea = false;
   let hasTub = false;
+  let hasTart = false;
   for (const it of order.items || []) {
     st.items += it.qty || 0;
     st.byType[it.type] = (st.byType[it.type] || 0) + (it.qty || 0);
     if (it.type === 'peachBase' || it.type === 'appleBase') hasBase = true;
     if (it.type === 'brewedTea') hasTea = true;
     if (it.type === 'tub') hasTub = true;
+    if (it.type === 'fruitTart') hasTart = true;
   }
   if (hasBase) st.baseOrders++;
   if (hasTea) st.teaOrders++;
   if (hasTub) st.tubOrders++;
+  if (hasTart) st.tartOrders++;
   const now = Date.now();
   profile.recent.push({ t: now, c: order.reward || 0 });
   profile.recent = profile.recent.filter(r => now - r.t < 10 * 60 * 1000).slice(-30);
@@ -277,6 +285,7 @@ export function currentChapter(profile) {
     if (profile.townLevel >= 2) unlockedGoals.push('baseOrders');
     if (profile.townLevel >= 3) unlockedGoals.push('teaOrders');
     if (profile.townLevel >= 8) unlockedGoals.push('tubOrders');
+    if (profile.townLevel >= 20) unlockedGoals.push('tartOrders');
     const stat = unlockedGoals[(episode - 1) % unlockedGoals.length];
     loop = {
       chapter,
@@ -368,6 +377,7 @@ const DAILY_TYPES = [
   { stat: 'baseOrders', min: 2, label: n => `Serve ${n} puree orders`, base: 2, per: 0.12 },
   { stat: 'teaOrders', min: 3, label: n => `Serve ${n} teas`, base: 2, per: 0.12 },
   { stat: 'tubOrders', min: 8, label: n => `Serve ${n} ice creams`, base: 1, per: 0.08 },
+  { stat: 'tartOrders', min: 20, label: n => `Serve ${n} fruit tarts`, base: 1, per: 0.05 },
 ];
 
 export function dayKey(now = Date.now()) {
@@ -420,6 +430,7 @@ const WEEKLY_TYPES = [
   { stat: 'baseOrders', min: 2, label: n => `Serve ${n} puree orders`, base: 7, per: 0.2 },
   { stat: 'teaOrders', min: 3, label: n => `Serve ${n} teas`, base: 7, per: 0.2 },
   { stat: 'tubOrders', min: 8, label: n => `Serve ${n} ice creams`, base: 4, per: 0.1 },
+  { stat: 'tartOrders', min: 20, label: n => `Serve ${n} fruit tarts`, base: 3, per: 0.08 },
 ];
 
 // Weekly goals count progress only from the start of the current local week.

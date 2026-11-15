@@ -434,6 +434,42 @@ function runMachines(s, level, fx) {
       continue;
     }
 
+    if (def.logic === 'splitter' || def.logic === 'merger') {
+      if (o.routerTimer > 0) o.routerTimer--;
+      let transferred = false;
+      if (o.routerTimer <= 0 && o.output.length < o.outCap) {
+        let socketIndex = 0;
+        if (def.logic === 'merger') {
+          socketIndex = o.inputs.findIndex((_, offset) =>
+            o.inputs[(o.routerIndex + offset) % o.inputs.length].buf.length > 0);
+          if (socketIndex >= 0) socketIndex = (o.routerIndex + socketIndex) % o.inputs.length;
+        }
+        const socket = o.inputs[socketIndex];
+        if (socket?.buf.length) {
+          const item = socket.buf.shift();
+          if (def.logic === 'splitter') {
+            item.route = o.nextExit;
+            o.nextExit = (o.nextExit + 1) % 2;
+          } else {
+            o.routerIndex = (socketIndex + 1) % o.inputs.length;
+          }
+          o.output.push(item);
+          o.routerTimer = SIM.routerTransferTicks;
+          transferred = true;
+        }
+      }
+      o.state = o.output.length >= o.outCap ? 'blocked' : transferred ? 'working' : 'idle';
+      o.reason = o.state === 'blocked' ? `${def.name} output full` : '';
+      if (o.state === 'blocked') {
+        o.blockedStreak++;
+        if (o.blockedStreak > s.trackers.longestBlock) s.trackers.longestBlock = o.blockedStreak;
+      } else {
+        o.blockedStreak = 0;
+      }
+      o.idleStreak = o.state === 'idle' ? (o.idleStreak || 0) + 1 : 0;
+      continue;
+    }
+
     if (o.recipe) {
       if (o.output.length >= o.outCap) {
         o.state = 'blocked';
@@ -498,24 +534,37 @@ function runMachines(s, level, fx) {
 function ejectOutputs(s) {
   for (const o of s.objects) {
     if (!o.output || !o.output.length) continue;
-    const dir = o.rot;
-    for (const [tx, ty] of edgeTiles(o, dir)) {
-      const b = beltAt(s, tx, ty);
-      if (!b || b.dir === opp(dir) || b.item) continue;
-      const item = o.output.shift();
-      b.item = {
-        type: item.type,
-        progress: 0,
-        fresh: item.type === 'tub'
-          ? Math.max(SIM.coldFreshTicks - (item.refreezeCount || 0) * SIM.refreezeFreshnessLoss, SIM.coldFreshTicks - SIM.maxRefreezeCycles * SIM.refreezeFreshnessLoss)
-          : null,
-        melt: null,
-        refreezeCount: item.refreezeCount || 0,
-        blocked: false,
-        blockedReason: '',
-        warned: false,
-      };
-      break;
+    const def = BUILDINGS[o.type];
+    const edges = def.logic === 'splitter'
+      ? [o.rot, (o.rot + 1) % 4]
+      : [o.rot];
+    const entry = o.output[0];
+    const preferred = def.logic === 'splitter' ? (entry.route || 0) : 0;
+    let ejected = false;
+    for (let offset = 0; offset < edges.length; offset++) {
+      const outputIndex = (preferred + offset) % edges.length;
+      const dir = edges[outputIndex];
+      for (const [tx, ty] of edgeTiles(o, dir)) {
+        const b = beltAt(s, tx, ty);
+        if (!b || b.dir === opp(dir) || b.item) continue;
+        const item = o.output.shift();
+        b.item = {
+          type: item.type,
+          progress: 0,
+          fresh: item.type === 'tub'
+            ? Math.max(SIM.coldFreshTicks - (item.refreezeCount || 0) * SIM.refreezeFreshnessLoss, SIM.coldFreshTicks - SIM.maxRefreezeCycles * SIM.refreezeFreshnessLoss)
+            : null,
+          melt: null,
+          refreezeCount: item.refreezeCount || 0,
+          blocked: false,
+          blockedReason: '',
+          warned: false,
+        };
+        if (def.logic === 'splitter') o.nextExit = (outputIndex + 1) % edges.length;
+        ejected = true;
+        break;
+      }
+      if (ejected) break;
     }
   }
 }

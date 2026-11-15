@@ -3,7 +3,7 @@ import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeom
 import { BUILDINGS, SIM } from '../data/buildings.js';
 import { ITEMS } from '../data/items.js';
 import { tileKey, DIR_VEC, EDGE_DIR } from '../core/iso.js';
-import { socketEdge, beltHasReceiver } from '../core/state.js';
+import { socketEdge, outputEdges, beltHasReceiver } from '../core/state.js';
 
 const COLORS = {
   // Deeper, slightly cooler greens: the reference's massed foliage reads as
@@ -872,6 +872,16 @@ export class WorkshopScene3D {
           blob(0.28 + col * 0.36, 0.66, 0.38 + row * 0.56, 0.2, 0.18, 0.2, 0xb6dc6a, false);
         }
       }
+    } else if (o.type === 'wheatField') {
+      base(COLORS.soil, 0.26);
+      for (let row = 0; row < 3; row++) {
+        for (let col = 0; col < 4; col++) {
+          const x = 0.32 + col * 0.44;
+          const z = 0.38 + row * 0.55;
+          cyl(0.035, 0.05, 0.68 + ((row + col) % 2) * 0.18, x, 0.78, z, 0x9e8b4c, 7);
+          blob(x, 1.1, z, 0.12, 0.24, 0.1, 0xd6b45f, false);
+        }
+      }
     } else if (o.type === 'waterPump') {
       base(0x8a6a58, 0.3);
       cyl(0.46, 0.5, 0.64, cx, 0.62, cz, 0xb9a79a);
@@ -891,6 +901,21 @@ export class WorkshopScene3D {
         cyl(0.07, 0.07, 0.1, cx + mx, 1.46, cz + mz, COLORS.blue, 10);
         blob(cx + mx, 1.33, cz + mz + 0.1, 0.1, 0.12, 0.03, 0x6da8e1, false);
       }
+    } else if (o.type === 'splitter') {
+      base(0x7a5a4a, 0.3);
+      this.cube(g, cx, 0.62, cz, 0.72, 0.46, 0.72, COLORS.blue);
+      blob(cx, 1.02, cz, 0.34, 0.16, 0.34, COLORS.cream);
+      this.cube(g, cx + 0.26, 1.14, cz, 0.44, 0.08, 0.12, COLORS.terra);
+      this.cube(g, cx, 1.14, cz + 0.26, 0.12, 0.08, 0.44, COLORS.terra);
+      face(0.64, cz + 0.38);
+    } else if (o.type === 'merger') {
+      base(0x7a5a4a, 0.3);
+      this.cube(g, cx, 0.62, cz, 0.8, 0.42, 0.8, COLORS.terra);
+      cyl(0.28, 0.36, 0.36, cx, 1.0, cz, COLORS.brass, 12);
+      for (const [dx, dz] of [[-0.26, 0], [0, 0.26]]) {
+        this.cube(g, cx + dx, 1.18, cz + dz, 0.24, 0.08, 0.24, COLORS.cream);
+      }
+      face(0.64, cz + 0.4);
     } else if (o.type === 'freezer') {
       base(0x4972a3, 0.3);
       this.cube(g, cx, 0.94, cz, 1.72, 1.08, 1.72, 0x9cbbe2);
@@ -926,6 +951,8 @@ export class WorkshopScene3D {
         press: [0xa0655a, 0xc6cb72],
         brewer: [0x4972a3, 0x8fb2d8],
         mixer: [0xa0655a, 0xd3a48c],
+        flourMill: [0x9e8b4c, 0xd6b45f],
+        bakery: [0xa0655a, 0xf2c4cf],
       };
       const [body, accent] = palettes[o.type] || [COLORS.blue, COLORS.blueLight];
       base(0x7a5a4a, 0.3);
@@ -960,6 +987,21 @@ export class WorkshopScene3D {
         cyl(0.08, 0.08, 0.84, cx - 0.32, 1.38, cz - 0.12, COLORS.brass, 10);
         this.cube(g, cx - 0.08, 1.8, cz - 0.12, 0.6, 0.12, 0.12, COLORS.cream);
         blob(cx + 0.18, 1.52, cz - 0.12, 0.12, 0.34, 0.12, 0xdcdcdc);
+      } else if (o.type === 'flourMill') {
+        base(0x795c46, 0.3);
+        this.cube(g, cx, 0.72, cz, 0.82, 0.78, 0.82, body);
+        cyl(0.34, 0.38, 0.14, cx, 1.2, cz, accent);
+        cyl(0.2, 0.24, 0.44, cx, 1.48, cz, COLORS.cream);
+        this.cube(g, cx, 1.76, cz, 0.54, 0.1, 0.54, COLORS.wood);
+        face(0.78);
+      } else if (o.type === 'bakery') {
+        base(0x795c46, 0.3);
+        this.cube(g, cx, 0.82, cz, 0.86, 1.0, 0.84, body);
+        this.cube(g, cx, 0.78, cz + 0.42, 0.66, 0.46, 0.12, COLORS.wood);
+        this.cube(g, cx, 0.76, cz + 0.5, 0.42, 0.26, 0.08, 0x9e4b4f);
+        this.cube(g, cx, 1.42, cz, 0.94, 0.18, 0.94, accent);
+        cyl(0.12, 0.16, 0.42, cx + 0.3, 1.68, cz - 0.24, COLORS.wood, 8);
+        face(1.12, cz + 0.43);
       } else {
         this.cube(g, cx, 0.88, cz, 0.82, 1.12, 0.82, body);
         this.cube(g, cx, 1.48, cz, 0.9, 0.16, 0.9, accent);
@@ -981,8 +1023,10 @@ export class WorkshopScene3D {
       marker.rotation.y = localDirection * Math.PI / 2;
     }
     if (def.kind === 'machine') {
-      const p = this.portPosition(o, o.rot || 0);
+      for (const edge of outputEdges(o)) {
+        const p = this.portPosition(o, edge);
       this.cube(g, p.x, 0.66, p.z, 0.24, 0.24, 0.24, COLORS.brass);
+      }
     }
     this.objectRoot.add(g);
   }
@@ -1027,31 +1071,94 @@ export class WorkshopScene3D {
 
   addItemMesh(type) {
     const group = new THREE.Group();
+    const item = ITEMS[type] || {};
     const color = ITEM_COLORS[type] || COLORS.cream;
-    if (type === 'tub' || type === 'melted') {
-      this.cube(group, 0, 0.19, 0, 0.38, 0.32, 0.38, color);
-      this.cube(group, 0, 0.37, 0, 0.42, 0.09, 0.42, 0xe8f1ee);
-      // A dotted freshness arc above the tub. Each dot is a segment; syncItems
-      // lights the surviving fraction and turns the arc terracotta near melt.
-      if (type === 'tub') {
+    const detail = item.tint2 || COLORS.wood;
+    const blob = (x, y, z, sx, sy, sz, tint, smooth = true) => {
+      const mesh = new THREE.Mesh(smooth ? sphereGeo : blobGeo, this.mat(tint));
+      mesh.position.set(x, y, z);
+      mesh.scale.set(sx, sy, sz);
+      mesh.castShadow = true;
+      group.add(mesh);
+      return mesh;
+    };
+    switch (item.form) {
+      case 'fruit':
+        blob(0, 0.24, 0, 0.27, 0.26, 0.27, color);
+        this.cube(group, 0.02, 0.49, 0, 0.045, 0.13, 0.045, detail);
+        blob(-0.09, 0.48, 0.02, 0.13, 0.055, 0.08, type === 'apple' ? 0x708549 : 0x8eaa4d, false);
+        break;
+      case 'leaf':
+        blob(0, 0.24, 0, 0.17, 0.055, 0.3, color, false).rotation.y = -0.55;
+        this.cube(group, 0, 0.3, 0, 0.025, 0.035, 0.34, detail);
+        break;
+      case 'drop':
+        blob(0, 0.24, 0, 0.2, 0.26, 0.2, color);
+        this.cube(group, 0, 0.47, 0, 0.07, 0.13, 0.07, color);
+        break;
+      case 'cream':
+        this.cube(group, 0, 0.23, 0, 0.3, 0.36, 0.3, color);
+        this.cube(group, 0, 0.44, 0, 0.22, 0.08, 0.22, detail);
+        this.cube(group, 0, 0.49, 0, 0.15, 0.045, 0.15, COLORS.cream);
+        break;
+      case 'washed':
+        this.cube(group, 0, 0.18, 0, 0.32, 0.2, 0.32, COLORS.cream);
+        blob(0, 0.3, 0, 0.19, 0.16, 0.19, color);
+        blob(-0.06, 0.43, 0, 0.1, 0.045, 0.08, 0x8eaa4d);
+        break;
+      case 'jar':
+        this.cube(group, 0, 0.23, 0, 0.29, 0.36, 0.29, color);
+        this.cube(group, 0, 0.44, 0, 0.25, 0.07, 0.25, COLORS.cream);
+        this.cube(group, 0, 0.49, 0, 0.16, 0.04, 0.16, detail);
+        break;
+      case 'cup':
+        this.cube(group, 0, 0.21, 0, 0.3, 0.24, 0.3, COLORS.cream);
+        this.cube(group, 0, 0.34, 0, 0.25, 0.06, 0.25, color);
+        this.cube(group, 0.18, 0.24, 0, 0.1, 0.12, 0.08, COLORS.brass);
+        blob(-0.07, 0.45, 0.01, 0.08, 0.1, 0.08, COLORS.white, false);
+        break;
+      case 'mix':
+        blob(0, 0.22, 0, 0.28, 0.18, 0.25, color);
+        blob(-0.1, 0.37, 0, 0.14, 0.12, 0.14, COLORS.cream);
+        blob(0.1, 0.38, 0.03, 0.13, 0.1, 0.13, color);
+        break;
+      case 'tub': {
+        this.cube(group, 0, 0.19, 0, 0.38, 0.32, 0.38, color);
+        this.cube(group, 0, 0.37, 0, 0.42, 0.09, 0.42, 0xe8f1ee);
         const dots = [];
-        const count = 12;
-        for (let i = 0; i < count; i++) {
-          const angle = (i / count) * Math.PI * 2;
-          const dot = this.cube(
-            group,
-            Math.cos(angle) * 0.25, 0.52, Math.sin(angle) * 0.25,
-            0.055, 0.026, 0.055,
-            COLORS.mint,
-            { castShadow: false, receiveShadow: false },
-          );
-          dots.push(dot);
+        for (let i = 0; i < 12; i++) {
+          const angle = (i / 12) * Math.PI * 2;
+          dots.push(this.cube(group, Math.cos(angle) * 0.25, 0.52, Math.sin(angle) * 0.25, 0.055, 0.026, 0.055, COLORS.mint, { castShadow: false, receiveShadow: false }));
         }
         group.userData.freshnessArc = dots;
+        break;
       }
-    } else {
-      this.cube(group, 0, 0.23, 0, 0.32, 0.38, 0.32, color);
-      this.cube(group, 0.04, 0.44, 0, 0.14, 0.12, 0.14, type.toLowerCase().includes('apple') ? 0x5e8a33 : 0x708549);
+      case 'melted':
+        blob(0, 0.12, 0, 0.36, 0.12, 0.32, color, false);
+        blob(-0.1, 0.18, -0.02, 0.16, 0.1, 0.16, COLORS.cream);
+        break;
+      case 'grain':
+        for (let i = 0; i < 3; i++) {
+          const x = (i - 1) * 0.12;
+          this.cube(group, x, 0.2, 0, 0.035, 0.3, 0.035, detail);
+          blob(x, 0.39, 0, 0.07, 0.13, 0.07, color, false);
+        }
+        break;
+      case 'flour':
+        blob(0, 0.23, 0, 0.27, 0.24, 0.24, color, false);
+        this.cube(group, 0, 0.43, 0, 0.2, 0.08, 0.2, detail);
+        break;
+      case 'tart':
+        blob(0, 0.19, 0, 0.34, 0.14, 0.34, detail, false);
+        blob(0, 0.25, 0, 0.3, 0.11, 0.3, color, false);
+        for (let i = -1; i <= 1; i++) {
+          this.cube(group, i * 0.12, 0.34, 0, 0.045, 0.04, 0.48, COLORS.cream);
+          this.cube(group, 0, 0.345, i * 0.12, 0.48, 0.04, 0.045, COLORS.cream);
+        }
+        break;
+      default:
+        blob(0, 0.24, 0, 0.24, 0.24, 0.24, color);
+        break;
     }
     return group;
   }
