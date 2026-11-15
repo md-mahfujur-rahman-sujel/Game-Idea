@@ -82,6 +82,8 @@ export function discardMachineInputItem(s, id, socketIndex, index) {
 
 function tickOrders(s, level, fx) {
   const active = s.orders.active;
+  if (s.orders.rushTicks > 0) s.orders.rushTicks--;
+  if (s.orders.rushCooldownTicks > 0) s.orders.rushCooldownTicks--;
   for (let i = active.length - 1; i >= 0; i--) {
     const order = active[i];
     if (order.errand) continue;
@@ -105,13 +107,17 @@ function tickOrders(s, level, fx) {
   if (s.orders.spawnTimer <= 0 && active.filter(o => !o.errand).length < (level.town ? (s.boardSlots || 3) : 3)) {
     const tpl = level.town ? townTemplate(s) : level.orderPool[s.orders.queueIndex % level.orderPool.length];
     s.orders.queueIndex++;
+    const rushHour = level.town && s.orders.rushTicks > 0;
+    const bonusTiers = Array.isArray(tpl.bonusTiers) ? tpl.bonusTiers : [];
     active.push({
       uid: `${level.id}-${tpl.id}-${s.trackers.elapsedTicks}`,
       templateId: tpl.id,
       items: tpl.items.map(it => ({ type: it.type, qty: it.qty, need: it.qty })),
       reward: tpl.reward,
       rep: tpl.rep,
-      bonusTiers: Array.isArray(tpl.bonusTiers) ? tpl.bonusTiers : [],
+      bonusTiers: rushHour
+        ? [{ within: 200, reward: Math.max(1, Math.round(tpl.reward * 0.4)) }, ...bonusTiers.filter(tier => tier.within > 200)].slice(0, 2)
+        : bonusTiers,
       patienceMax: tpl.patience,
       remaining: tpl.patience * 10,
       createdAt: s.trackers.elapsedTicks,
@@ -121,7 +127,7 @@ function tickOrders(s, level, fx) {
       ? townTemplate(s)
       : level.orderPool[s.orders.queueIndex % level.orderPool.length];
     const gapSeconds = Number.isFinite(next?.gap) ? Math.max(0, next.gap) : 12;
-    s.orders.spawnTimer = gapSeconds * 10;
+    s.orders.spawnTimer = Math.round(gapSeconds * (rushHour ? 6 : 10));
     if (fx) fx.sfx('customer');
   }
 }

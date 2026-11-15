@@ -76,7 +76,7 @@ prd.md                canonical product requirements (v4.6)
 
 ## Save data
 
-Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. The active level and Town workshop layout are saved separately so leaving Town mode does not erase its layout. Ordered v1-to-v4 migrations preserve existing progress and add Town goals, router buffers, and fruit-tart tracking. A previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
+Progress is stored locally in one versioned document: IndexedDB first, with a localStorage fallback. The active level and Town workshop layout are saved separately so leaving Town mode does not erase its layout. Ordered v1-to-v5 migrations preserve existing progress and add Town goals, router buffers, fruit-tart tracking, and Rush Hour state. A previous-good backup slot is kept, and saved state is sanitised before it is trusted. There is no account and no network sync.
 
 ## Internal reference material
 

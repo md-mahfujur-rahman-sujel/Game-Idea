@@ -1,11 +1,18 @@
 # Product Requirements Document: Little Batch Works
 
 **Status:** Final draft for production
-**Version:** 4.6 (supersedes v4.5 and all earlier drafts)
+**Version:** 4.7 (supersedes v4.6 and all earlier drafts)
 **Date:** 2026-11-15
 **Product type:** 3D voxel factory tycoon, shipped for web, Windows, and Android
 **Build targets:** Browser (web) · Windows 10/11 x64 (`.exe`) · Android 8.0+ (`.apk`)
 **Working title:** *Little Batch Works* (alternate candidate: *Frostline Factory*; verify name availability before public use)
+
+### Changes from v4.6
+
+| # | Change |
+|---|---|
+| 1 | Added optional, save-safe Town Rush Hour: shorter order intervals and a stronger fast-delivery tier, with no expiry or loss state. |
+| 2 | Advanced the shared save schema to v5 with a migration for Town Rush Hour duration and cooldown. |
 
 ### Changes from v4.4
 
@@ -473,6 +480,7 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - Difficulty scales with Town Level: item count, product lines, and combo rules grow gradually. The generator guarantees every order is producible with the player's unlocked machines.
 - Existing patience-based customers remain in story levels. Board orders use no timer, which suits mobile sessions.
 - Town orders offer a fast-delivery bonus: +25% when served within 30 seconds or +10% within 90 seconds. These are bonus tiers only; an order never expires, loses its base reward, or causes a failure state.
+- Optional **Rush Hour** runs for 90 seconds of active simulation time, shortening order intervals by 40% and giving orders created during it a +40% bonus when served within 20 seconds. It has a five-minute cooldown from activation; pause stops both clocks. Orders still never expire or lose their base reward.
 
 #### Land expansion
 
@@ -506,9 +514,9 @@ Recipes and machines are data-driven. Each has `unlockLevel`; the build menu sho
 - Every unlock must be reachable by play alone; the M3 balance pass sets exact numbers.
 - Reputation (§6.7) still applies to the story levels only. In Town mode, XP and Town Level replace it for gating, so spending still cannot lock progression.
 
-#### Save schema v4
+#### Save schema v5
 
-Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily and weekly goals, permits, return-time data, active order bonus tiers, and routing-device queues and timers. Migrations v1 to v2 preserve a Town session in the separate Town slot; v2 to v3 adds weekly goal and bonus-tier defaults; v3 to v4 adds fruit-tart Town statistics and router state defaults. Every loaded layout is sanitized against its level data.
+Stores the persistent Town layout separately from the currently active story level, alongside Town progression, order board, daily and weekly goals, permits, return-time data, active order bonus tiers, routing-device queues and timers, and Rush Hour duration and cooldown. Migrations v1 to v2 preserve a Town session in the separate Town slot; v2 to v3 adds weekly goal and bonus-tier defaults; v3 to v4 adds fruit-tart Town statistics and router state defaults; v4 to v5 adds bounded Rush Hour timers. Every loaded layout is sanitized against its level data.
 
 #### Requirements
 
@@ -536,7 +544,7 @@ Stores the persistent Town layout separately from the currently active story lev
 
 ### 6.10 Save, settings, and recovery
 
-- **Saved:** current level, placed objects and their positions/upgrades, buffers and in-flight items (including freshness timers and refreeze count), coins, reputation, unlocked levels, completed objectives, cream used this level, settings, worker assignments.
+- **Saved:** current level, placed objects and their positions/upgrades, buffers and in-flight items (including freshness timers and refreeze count), Town Rush Hour duration and cooldown, coins, reputation, unlocked levels, completed objectives, cream used this level, settings, worker assignments.
 - **Autosave triggers:** placement changes, completed orders, level completion, settings changes, and a 10-second heartbeat during active play. Writes are debounced 2 seconds.
 - **Format:** one versioned JSON document, a previous-good backup slot, and one validated daily recovery snapshot, accessed through a single `SaveStore` interface. Update the daily snapshot at most once per 24 hours of active play. `SAVE_VERSION` is one constant with an explicit migration function per version bump. Every build reads and writes identical schemas.
 - **Platform adapters:** web writes IndexedDB only. Windows (Electron) writes IndexedDB in Electron's `userData` partition and mirrors the JSON in that same per-user app-data directory. Android (Capacitor) writes IndexedDB and mirrors the JSON to the private app data directory via the Filesystem plugin.
@@ -1096,5 +1104,6 @@ This document merges earlier drafts. Where they conflicted, the call below is au
 | 50 | A short campaign did not teach or unlock the bakery line and explicit routing devices | **Add two routing lessons and one wheat-to-tart bakery level before Town; move Town unlock to level 6** | Makes the tycoon progression easier to understand and gives the story a clear opening arc |
 | 51 | Native shells needed save portability and offline-safe storage | **Use Electron per-user `userData` and Capacitor's app-private data mirror with the shared versioned JSON document** | Lets the same progress survive app restarts without adding accounts, cloud sync, or external permissions |
 | 52 | Keyboard play could not place or select world objects | **Make the canvas focusable with an arrow-key grid cursor, Enter, R, and Escape controls** | Keeps the world buildable without a pointer while preserving visible focus |
+| 53 | Town needed an optional activity spike without adding failure pressure | **Add a 90-second Rush Hour with shorter intervals, an extra quick-delivery tier, and a five-minute cooldown; pause both clocks and never expire orders** | Gives players a voluntary throughput challenge and a small reward while retaining the no-fail Town promise |
 
 **Superseded documents:** Frostline Factory v0.1, Little Batch Works v1.0, PRD 2.0, `prd-merged.md`, v3.1, v3.2, and the v3.3 state of this file. Retain for history; do not edit as sources of truth.

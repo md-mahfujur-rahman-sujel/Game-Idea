@@ -574,6 +574,19 @@ class Controller {
     }
   }
 
+  startRushHour() {
+    const orders = this.s?.orders;
+    if (!this.level?.town || !orders || orders.rushTicks > 0 || orders.rushCooldownTicks > 0) return false;
+    orders.rushTicks = 90 * 10;
+    orders.rushCooldownTicks = 5 * 60 * 10;
+    orders.spawnTimer = Math.min(orders.spawnTimer, 1);
+    this.audio.cue('unlock');
+    toast('Rush Hour', 'Order intervals shrink by 40% for 90 seconds. No order expires, and new orders earn a bigger quick-delivery bonus.', 'good');
+    this.hud?.refresh();
+    this.saveSoon();
+    return true;
+  }
+
   openTown() {
     if (!this.s || !this.level?.town || document.querySelector('.backdrop')) return;
     let resume = false;

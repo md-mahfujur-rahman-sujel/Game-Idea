@@ -1,7 +1,7 @@
 // One versioned save document with a previous-good slot and daily recovery copy.
 // IndexedDB is primary; localStorage is the fallback and keeps a separate daily copy.
 
-export const SAVE_VERSION = 4;
+export const SAVE_VERSION = 5;
 const DB_NAME = 'little-batch-works';
 const STORE = 'saves';
 const KEY = 'current';
@@ -297,6 +297,19 @@ function addRoutingDeviceDefaults(state) {
   };
 }
 
+function addRushHourDefaults(state) {
+  if (!state || typeof state !== 'object') return state;
+  const orders = state.orders || {};
+  return {
+    ...state,
+    orders: {
+      ...orders,
+      rushTicks: Number.isFinite(orders.rushTicks) ? Math.max(0, Math.min(900, Math.floor(orders.rushTicks))) : 0,
+      rushCooldownTicks: Number.isFinite(orders.rushCooldownTicks) ? Math.max(0, Math.min(3000, Math.floor(orders.rushCooldownTicks))) : 0,
+    },
+  };
+}
+
 const MIGRATIONS = {
   1: doc => ({
     ...doc,
@@ -326,6 +339,14 @@ const MIGRATIONS = {
       ...doc,
       profile,
       level: doc.level ? { ...doc.level, state: addRoutingDeviceDefaults(doc.level.state) } : null,
+    };
+  },
+  4: doc => {
+    const profile = { ...doc.profile, townState: addRushHourDefaults(doc.profile.townState) };
+    return {
+      ...doc,
+      profile,
+      level: doc.level ? { ...doc.level, state: addRushHourDefaults(doc.level.state) } : null,
     };
   },
 };

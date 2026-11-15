@@ -13,7 +13,7 @@ export function createLevelState(level) {
     nextObjectId: 1,
     objects: [],
     belts: {},
-    orders: { active: [], queueIndex: 0, spawnTimer: 0, errand: null },
+    orders: { active: [], queueIndex: 0, spawnTimer: 0, errand: null, rushTicks: 0, rushCooldownTicks: 0 },
     counters: {
       fulfilled: 0,
       byType: {},
@@ -765,6 +765,8 @@ export function sanitizeState(raw, level) {
   })).filter(o => o.items.some(it => it.need > 0));
   s.orders.queueIndex = clampNum(raw.orders?.queueIndex, 0, level.town ? 1e9 : level.orderPool.length, 0);
   s.orders.spawnTimer = clampNum(raw.orders?.spawnTimer, 0, 9999, 0);
+  s.orders.rushTicks = level.town ? Math.floor(clampNum(raw.orders?.rushTicks, 0, 900, 0)) : 0;
+  s.orders.rushCooldownTicks = level.town ? Math.floor(clampNum(raw.orders?.rushCooldownTicks, 0, 3000, 0)) : 0;
   s.orders.errand = null;
   const re = raw.orders && raw.orders.errand;
   if (re && typeof re === 'object' && Number.isFinite(re.remaining)) {

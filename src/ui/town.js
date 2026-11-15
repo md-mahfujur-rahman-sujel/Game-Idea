@@ -61,6 +61,21 @@ function render(ctrl) {
   }).join('');
   html += section('Weekly goals · resets Monday', `${weeklyGoals}<div class="ctx-sub">Optional rewards; unclaimed goals never reduce Town progress.</div>`);
 
+  const rushTicks = s?.orders?.rushTicks || 0;
+  const rushCooldown = s?.orders?.rushCooldownTicks || 0;
+  const rushClock = ticks => {
+    const seconds = Math.ceil(ticks / 10);
+    return `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`;
+  };
+  const rushStatus = rushTicks > 0
+    ? `Rush Hour is active · ${rushClock(rushTicks)} left.`
+    : rushCooldown > 0
+      ? `The market needs a breather · ready in ${rushClock(rushCooldown)}.`
+      : 'Order intervals shrink by 40% for 90 seconds, with a stronger 20-second delivery bonus.';
+  const rushDisabled = rushTicks > 0 || rushCooldown > 0;
+  html += section('Optional Rush Hour', `<div class="ctx-sub">${rushStatus} Timers pause with production. Orders never expire and never cause a loss.</div>
+    <div class="ctx-actions"><button class="btn btn-sm ${rushDisabled ? '' : 'btn-primary'}" data-town="rush" ${rushDisabled ? 'disabled' : ''}>${rushTicks > 0 ? 'Rush Hour in progress' : rushCooldown > 0 ? 'Market resting' : 'Start Rush Hour'}</button></div>`);
+
   const cur = EXPANSIONS[profile.expansion];
   const next = nextExpansion(profile);
   let land = `<div>${escapeHtml(cur.name)}</div>`;
@@ -95,6 +110,7 @@ export function openTownDialog(ctrl) {
     else if (act === 'chest') ctrl.claimDailyChest();
     else if (act === 'weekly-claim') ctrl.claimWeeklyGoal(Number(btn.dataset.index));
     else if (act === 'expand') ctrl.expandTown();
+    else if (act === 'rush') ctrl.startRushHour();
     paint();
   });
   return openDialog({
